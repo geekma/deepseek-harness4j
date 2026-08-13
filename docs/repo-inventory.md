@@ -82,9 +82,9 @@
 ## 5. 校验
 
 ```sh
-# 上游全量枚举核对（结果=零遗漏）
-find . -name '*.py' -not -path './vendor/*' -not -path '*/node_modules/*' | wc -l   # 19
-find . -name '*.md' -not -path './vendor/*' -not -path '*/node_modules/*' | wc -l   # 2361
+# 上游全量枚举核对（结果=零遗漏；已排除仓库内意外检入的 deepseek-harness4j 嵌套副本）
+find . -name '*.py' -not -path './vendor/*' -not -path '*/node_modules/*' -not -path './deepseek-harness4j/*' | wc -l   # 19
+find . -name '*.md' -not -path './vendor/*' -not -path '*/node_modules/*' -not -path './deepseek-harness4j/*' | wc -l   # 2344
 ```
 
-`python/` 内 19 个 `.py` 与 8 个 `.md` 全部有 Java 对应物（见 `port-coverage.md`）；本清单覆盖其余 2353 个 md 的归属与状态。
+`python/` 内 14 个 `.py` 与 8 个 `.md` 全部有 Java 对应物（见 `port-coverage.md`）；连同引用的 `scripts/*.py`、`examples/jsonrpc-agent/minimal.py` 共 19 个 `.py` 全数覆盖。本清单覆盖其余 2336 个 md 的归属与状态。

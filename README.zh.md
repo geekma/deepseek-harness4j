@@ -34,6 +34,66 @@
 
 **核心结论：换模型、接自定义服务端，大多属于"配置"而非"改代码"。** 因为 `dsh-llm-pi-ai` 已内置 OpenAI 兼容、Anthropic 等多种协议，自建 OpenAI 兼容网关可直接通过配置文件接入。这条结论对 Java SDK 同样成立——Java 侧只是换了客户端语言，模型配置完全一致。
 
+### 上游与 deepseek-harness4j —— 完整功能对比
+
+下表对比**上游** `deepseek-ai/deepseek-harness`（Node.js/TypeScript 运行时 + Web UI + CLI + Python SDK + ACP）与 **deepseek-harness4j**（本仓库，Java SDK 移植版）。区分原则很简单：**4j 复用同一套上游运行时（`dsh-jsonrpc-agent`）及其全部运行时侧 Cordis 插件，因此"运行时"相关行一律为 ✅；只有"客户端通道"中 Python SDK 未暴露的部分，才在 4j 中标为有意不纳入。**
+
+#### 1. 客户端通道（语言绑定 / UI 入口）
+
+| 通道 | 上游（`deepseek-harness`） | deepseek-harness4j | 4j 未实现时的说明 |
+|---|---|---|---|
+| __Python SDK__（`python/sdk`，包名 `deepseek_harness`） | ✅ 以 `deepseek-harness-sdk` Python 包发布 | ✅ __逐行 Java 移植__（`com.deepseek.harness4j`，包名 `deepseek-harness4j-sdk`） | — |
+| __Java SDK__（本仓库） | —（上游没有 Java SDK） | ✅ 本仓库即为此 Java SDK | 上游无 Java SDK，故 4j 补齐该通道。 |
+| __Web UI__（`apps/web`，浏览器应用 `http://127.0.0.1:3080`） | ✅ 完整 React + Cordis 浏览器 UI，含 Settings、模型目录、会话浏览器、原位编辑、agent 检查器 | 📄 __不随包提供——使用上游运行时或上游仓库__ | 4j 是"编程调用 SDK 通道"，不是浏览器应用。Web UI 属于上游运行时侧功能；如需使用，在上游 monorepo 里运行（`pnpm dsh web` 或 `npx @deepseek-ai/dsh web`）——它和 4j 的 `settings.yaml`、模型目录、会话存储、`cordis.yml` 组合 100% 共享。 |
+| __Headless CLI__（`apps/cli`，命令 `dsh --profile headless`） | ✅ 单次非交互运行；打印 `final_response`；可切换机器可读/人工可读输出 | 📄 __等价语义由 SDK `DeepSeekHarness.run()` 提供__——4j 不额外提供独立 CLI 包装器 | CLI 只是同一运行时的"另一个客户端"；`RunResult.finalResponse()` / `RunResult.finishReason()` / `RunResult.events()` 返回的内容与 `dsh --profile headless` 完全一致。CI 流水线场景下建议用一个小的 Java `main` 封装 `run()`（见 `MinimalAgent`），这样凭据和命令行参数处于 Java 原生控制下，避免 shell 解析问题。 |
+| __ACP 服务端__（`apps/acp-agent`，Agent Client Protocol） | ✅ 另一条线路的程序化自动化服务端，含会话/权限/取消语义 | 📄 __不在范围——与语言无关的独立通道__ | ACP 是与 4j 无关的客户端协议；如需 ACP 语义继续使用上游 ACP 二进制即可。4j 的 JSON-RPC SDK 已覆盖同等功能面（跑任务、流式事件、取消、权限回调），只是走另一条线路。 |
+| __Spring Boot starter__（自动配置 + properties 绑定） | —（上游是 Python 生态，无 Spring 支持） | ✅ `spring-boot-starter` 模块提供 `DeepSeekHarnessProperties` + 自动装配 `DeepSeekHarness` Bean（由 Spring 管理生命周期） | __4j 独有能力__：原生 Spring 生态集成。Python SDK 只暴露原始类；4j 额外提供 `spring-boot-example`（Spring MVC REST Controller 封装 `run()`）。 |
+
+#### 2. Cordis 插件框架与运行时 agent 能力（两者共用**同一套上游运行时二进制**——能力面全为 ✅）
+
+> "一切皆插件"是核心原则。**4j 没有把运行时插件重新在 Java 里实现——而是在子进程内加载**完全相同的**上游 TypeScript Cordis 插件。** 这是为何运行时侧所有功能项两列完全一致的原因：Java 客户端通过 stdio 的按行 JSON-RPC 2.0 与 `dsh-jsonrpc-agent` 通信，后者按 `cordis.yml` 组装出与上游完全相同的 Cordis 插件树。
+
+| 能力 / Cordis 插件 | 上游运行时 | deepseek-harness4j（同一运行时） | 说明 |
+|---|---|---|---|
+| __会话管理__（inbox、持久化收件、轮次边界、子代理谱系追踪） | ✅ `@deepseek-ai/dsh-core/session` | ✅ 相同 | 4j 通过 JSON-RPC 接收每一条会话通知；`Session.run()` 边界严格对应 `turn/end`。 |
+| __系统提示词__（组合、部署人格、runtime-context 贡献、抑制机制） | ✅ `@deepseek-ai/dsh-core/system-prompt` | ✅ 相同 | 通过 `DSH_SYSTEM_PROMPT` 或 `cordis.yml` 配置；无需 Java 侧代码。 |
+| __工具系统__（注册、schema、带类型的参数、output schema + render、`presentationMeta`、HMR 安全注销） | ✅ `@deepseek-ai/dsh-core/tools` + `defineTool()` | ✅ 相同的运行时插件与契约 | 新增工具按上游方式写一个 TypeScript Cordis 插件（运行时侧）并通过 `cordis.yml` 挂载。4j 不提供"Java 工具接口"，因为工具是运行时侧概念而非客户端概念；见 [adding-a-tool.md](docs/user-guide/adding-a-tool.md)。 |
+| __Agent 循环__（plan、观察、工具调用、中途引导、子代理委派、空闲判定） | ✅ `@deepseek-ai/dsh-core/agent` + `@deepseek-ai/dsh-agent-loop` | ✅ 相同 | `agent-loop` 是纯运行时内部事务。4j 只消费 `RunResult` 事件，不直接控制循环。 |
+| __LLM 接入与适配器__（流式调用、usage 上报、工具调用 `arguments` 原始 JSON 字符串、错误码、replayState、`resolveModel()`） | ✅ `@deepseek-ai/dsh-llm` + 适配器 `dsh-llm-deepseek` / `dsh-llm-pi-ai` / `dsh-llm-retry` | ✅ 相同的运行时适配器、相同的目录项语义、相同的模型配置 | 通过 `cordis.yml` / `settings.yaml` / 环境变量（`DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DSH_MODEL`）配置。新增自定义适配器依然是运行时侧 TypeScript Cordis 插件，与上游写法一致；见 [adding-an-llm-adapter.md](docs/user-guide/adding-an-llm-adapter.md)。 |
+| __Bash / Shell__（持久化 PTY、所有者作用域、danger-full-access 策略、超时、`todo_write`） | ✅ `@deepseek-ai/dsh-shell` / `@deepseek-ai/dsh-tool-bash` | ✅ 相同 | 使用运行时 fork 的本地 shell。Java 客户端不会直接接触 PTY 字节流——工具调用结果以结构化 `RunResult` 事件形式传回。 |
+| __文件系统__（view / create / str_replace / insert 编辑器；`fs-local` 后端；上下文压缩） | ✅ `@deepseek-ai/dsh-tool-str-replace-editor`、`@deepseek-ai/dsh-fs-local`、compaction 插件 | ✅ 相同 | 作用于运行时侧的 `DSH_CWD`。工作区路径通过 `DeepSeekHarnessConfig.cwd()` 注入（即成为 `DSH_CWD`）。 |
+| __子进程派生__（前台进程、进程内 subagent spawn provider、信号传递） | ✅ `@deepseek-ai/dsh-subprocess`、spawn 插件、subagent 插件 | ✅ 相同 | 子代理事件以嵌套通知的形式传回；`RunResult.notifications` 严格按协议顺序保存，`HarnessClient` 按 Python SDK 语义保留子代理谱系。 |
+| __Web / 网络能力__（fetch、浏览、web-schedule 覆盖层） | ✅ `@deepseek-ai/dsh-web` + 提醒配置层 | ✅ 相同（在 `cordis.yml` 中挂载即可生效） | 纯运行时侧；无需 Java 做任何处理。 |
+| __多代理编排__（并行 agent、`toolName: subagent`、谱系追踪） | ✅ subagent、plan、todo 插件 | ✅ 相同 | 子代理生命周期事件按 Python SDK 语义通过 `onNotification` 回调送达——`SubscriptionRoutingTest` 与 `ClientLevelTest` 已覆盖。 |
+| __工作流 / plan / todo-write__（结构化中途计划） | ✅ plan workflow 插件、`todo_write` 工具 | ✅ 相同 | Cordis 可组合、语言无关。 |
+| __持久化__（JSONL 会话、语义检查点、zstd 默认压缩、上下文压缩） | ✅ `@deepseek-ai/dsh-persistence-*`、context compaction 插件 | ✅ 相同 | 使用配置中的 `DSH_SESSION_ROOT` / `sessionRoot`。Java 侧无任何持久化代码。 |
+| __审批 / 权限__（策略、审批 UI 提示、danger-full-access 覆盖） | ✅ policy + strategy 插件 | ✅ 相同 | 运行时侧，语言无关。 |
+| __沙箱 / 原生加固__（Linux landlock、macOS `node-pty` spawn helper） | ✅ 上游 `native/` addon、伴随 helper 文件 | ✅ 相同（随打包的运行时二进制携带） | 4j 不复制任何原生代码；匹配平台/架构的 `dsh-jsonrpc-agent` 编译产物已原生携带上述组件。 |
+
+**为何 4j 不把运行时插件移植为 Java：** 插件基于 Cordis effect 模型（注册/注销与 fiber 生命周期绑定）、强 schema、共享运行时事件总线。将它们改写为 Java 等于"把上游整台引擎换语言重写一遍"——N 倍工作量、零功能收益。相反，4j 直接随包携带同一份经验证的 `dsh-jsonrpc-agent` 二进制并通过 JSON-RPC 驱动，**确保**与 Python SDK 调用方**语义、配置面、模型输出完全相同**。
+
+#### 3. 开发工具链、SDK 面、生态集成
+
+| 层次 | 上游（`deepseek-harness`） | deepseek-harness4j | 非 1:1 时说明 |
+|---|---|---|---|
+| __SDK 公开 API__（`DeepSeekHarness`、`Session`、`RunResult`、`HarnessClient`、`Notification`、`IncomingRequest`、异常体系） | ✅ Python 包 `deepseek_harness` | ✅ __100% 语义移植__——类名相同、方法签名相同、异常层次相同 | 逐条对照见 [java-migration-notes.md](docs/java-migration-notes.md)。差别仅属语法层面（builder vs 关键字参数、`AutoCloseable` vs 上下文管理器、`record` vs pydantic）。 |
+| __SDK 底层 JSON-RPC 客户端__（`initialize`、`session/prompt`、`shutdown`、按 `id` 路由、订阅、入站 `llm.request` 桥接） | ✅ Python `HarnessClient` + JSON-RPC stdio 按行分帧 | ✅ __100% 移植到 Java__——相同传输规则、相同 stderr 环形缓冲、相同逐调用语义 | 由 `ClientLevelTest`（15 用例）+ `SubscriptionRoutingTest`（3 用例）覆盖。 |
+| __运行时载体解析__（打包产物 `dsh-jsonrpc-agent-<platform>-<arch>`、dev node 模式、macOS spawn helper 校验） | ✅ Python 包 `deepseek_harness_runtime` | ✅ Java `com.deepseek.harness4j.runtime.RuntimeResolver`（逐行移植） | 见 [sdk-runtime/README.md](sdk-runtime/README.md)。双载体、模式选择、报错信息完全相同（`MissingRuntimeException` 对应 Python `FileNotFoundError`）。 |
+| __SDK 测试__（传输、路由、boot、build hooks、smoke completions、release version、macOS deployment target、运行时解析） | ✅ `python/sdk/tests` pytest 套件 | ✅ __等价 JUnit 5 套件__（60 用例、0 failures、缺本地运行时载体时按语义跳过 7 条） | 与 Python 原版对照过覆盖率与语义；见 [test-report.md](docs/test-report.md)。 |
+| __构建工具__（SDK 打包分发） | Python：`hatch` + `uv`（`pyproject.toml`、`hatch_build.py`）→ wheels + sdist | Java：__Maven 3.9+__（多模块 `pom.xml`）→ jars（sdk / spring-boot-starter / spring-boot-example） | 生态替换，非语义缺口。上游 `scripts/*.py` 中 3 个纯函数（build-python-release hook、smoke runtime、macOS deployment-target 校验）已移植为 Java 的 `com.deepseek.harness4j.build.*`。 |
+| __Model Experience / Agent Notes / `.agents/` 工程纪律__ | ✅ 上游 `.agents/` 1386 份工程文件，非 SDK 代码 | 📄 __不拷贝——与语言无关的开发流程文件__ | 属于上游工程过程产物（每 PR 的 Agent Notes、技能文件、经验总结）。既非运行时代码、也非 SDK 代码，没有也不可能需要 Java 对应物。 |
+| __文档站 / i18n / website__（`website/`、VitePress、`docs/i18n/`） | ✅ VitePress 文档站 + 中英 i18n 分层 | ✅ __以本仓库内的双语 Markdown 文件直接承载__（`.md` 中文 / `.en.md` 英文，互相交叉引用） | 4j 不单独运行 VitePress 站点。全部 Java 专用文档以本仓库的 17 对双语 `.md` 文件承载。 |
+| __Spring Boot 3.x 集成__（自动配置、properties 绑定、MVC REST 示例） | 上游不提供（Python 生态可用 Flask/FastAPI 替代，但 Python SDK 路径里并未内置） | ✅ `spring-boot-starter` + `spring-boot-example` | __4j 独有能力__（见 [java-migration-notes.md](docs/java-migration-notes.md) 第 7 节）。对 Java/Spring 企业用户，引入 `deepseek-harness4j-spring-boot-starter` 即可开箱使用，无需手工管理生命周期。 |
+
+#### 4. 总结：4j 是什么（以及它刻意不做什么）
+
+- ✅ **Python SDK 功能面 100% 移植。** 公开 API、JSON-RPC 协议、异常体系、运行时载体解析、零配置默认 `cordis.yml`、会话语义、通知顺序、子代理谱系——全部逐行等价。
+- ✅ **运行时 Cordis 插件能力 100% 复用。** 会话、系统提示词、工具、agent loop、LLM 适配器、bash、文件系统、子进程、网络、子代理、工作流、持久化、审批、沙箱——与上游完全相同，因为它们**运行在同一个上游 `dsh-jsonrpc-agent` 二进制内部**，而不是运行在 Java 进程内部。
+- 📄 **客户端通道未移植（按设计）：** Web UI、headless CLI、ACP 服务端——它们是同一运行时的"其他客户端"，不属于 SDK 范畴。4j 以程序化 API 提供等价的功能面；如需浏览器交互/命令行一次性运行/ACP 自动化，直接使用上游二进制即可。
+- 📄 **上游 TypeScript 源码（`packages/`、`apps/`、`vendor/`、`native/`）未改写为 Java。** 它们构成 4j 随包携带并消费的运行时二进制。用 Java 重写一遍等于整台引擎移植，对兼容性零收益。4j 的方式保证了与任何其他客户端行为一致。
+
+---
+
 ### 当前状态
 
 - **开发者预览**：快速迭代中，**会有破坏兼容性的变更**。
@@ -131,8 +191,14 @@ pnpm exec tsx scripts/build-exe-for-python-sdk.ts
 
 ## 快速上手（Java SDK）
 
-```java
+### 三步最小示例
 
+```sh
+# 1) 引入 Maven 依赖（坐标：com.deepseek-ai:deepseek-harness4j-sdk）
+# 2) 配置凭据
+export DEEPSEEK_API_KEY=sk-your-key
+# 3) 直接使用
+```
 
 ```java
 import com.deepseek.harness4j.DeepSeekHarness;
@@ -197,6 +263,37 @@ try (DeepSeekHarness harness = new DeepSeekHarness(DeepSeekHarnessConfig.builder
 | `events()` | 会话事件列表（含模型请求、工具调用等） |
 | `notifications()` | 子代理与运行时通知列表 |
 
+### 指向自定义 / 自托管模型
+
+运行时会继承 `DEEPSEEK_BASE_URL` 与 `DEEPSEEK_API_KEY`，因此接模型共有三种方式：
+
+```sh
+# 接法 A：官方 DeepSeek
+export DEEPSEEK_API_KEY=sk-xxx
+
+# 接法 B：OpenAI 兼容自建网关（vLLM / Ollama / LM Studio / 公司代理……）
+export DEEPSEEK_API_KEY=sk-任意非空值
+export DEEPSEEK_BASE_URL=http://127.0.0.1:8000/v1
+export DSH_MODEL=qwen2.5-72b-instruct
+
+# 接法 C：更精细的多提供方 -> 在 cordis.yml 挂 llm-pi-ai 并在 settings.yaml 配置（见下文「自定义模型配置」）
+```
+
+Java SDK 指向自定义 provider 的示例：
+
+```java
+import com.deepseek.harness4j.DeepSeekHarness;
+import com.deepseek.harness4j.DeepSeekHarnessConfig;
+
+try (DeepSeekHarness harness = new DeepSeekHarness(DeepSeekHarnessConfig.builder()
+        .provider("acme-gateway")      // settings.yaml 里自定义的路由
+        .model("acme-large")
+        .cordis("examples/jsonrpc-agent/minimal.cordis.yml")
+        .build())) {
+    System.out.println(harness.run("写一段 Java 读取 JSON 的示例", null, null).finalResponse());
+}
+```
+
 ---
 
 ## 自定义模型配置
@@ -227,32 +324,6 @@ try (DeepSeekHarness harness = new DeepSeekHarness(DeepSeekHarnessConfig.builder
         .model("your-custom-model-id")
         .build())) {
     System.out.println(harness.run("你的任务描述").finalResponse());
-}
-```
-
-三种接法：
-
-```sh
-# 接法 A：官方 DeepSeek
-export DEEPSEEK_API_KEY=sk-xxx
-
-# 接法 B：OpenAI 兼容自建网关（vLLM / Ollama / LM Studio / 公司代理……）
-export DEEPSEEK_API_KEY=sk-任意非空值
-export DEEPSEEK_BASE_URL=http://127.0.0.1:8000/v1
-export DSH_MODEL=qwen2.5-72b-instruct
-
-# 接法 C：更精细的多提供方 -> 在 cordis.yml 挂 llm-pi-ai 并在 settings.yaml 配置（见下文）
-```
-
-Java SDK 指向自定义 provider：
-
-```java
-try (DeepSeekHarness harness = new DeepSeekHarness(DeepSeekHarnessConfig.builder()
-        .provider("acme-gateway")      // settings.yaml 里自定义的路由
-        .model("acme-large")
-        .cordis("examples/jsonrpc-agent/minimal.cordis.yml")
-        .build())) {
-    System.out.println(harness.run("写一段 Java 读取 JSON 的示例", null, null).finalResponse());
 }
 ```
 

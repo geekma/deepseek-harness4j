@@ -82,9 +82,11 @@ All 14 `.py` files and all 8 `.md` files have Java counterparts; the line-by-lin
 ## 5. Verification
 
 ```sh
-# Full upstream enumeration (result: zero omissions)
-find . -name '*.py' -not -path './vendor/*' -not -path '*/node_modules/*' | wc -l   # 19
-find . -name '*.md' -not -path './vendor/*' -not -path '*/node_modules/*' | wc -l   # 2361
+# Full upstream enumeration (result: zero omissions; the accidental nested deepseek-harness4j copy is excluded)
+find . -name '*.py' -not -path './vendor/*' -not -path '*/node_modules/*' -not -path './deepseek-harness4j/*' | wc -l   # 19
+find . -name '*.md' -not -path './vendor/*' -not -path '*/node_modules/*' -not -path './deepseek-harness4j/*' | wc -l   # 2344
 ```
 
-All 19 `.py` files and 8 `.md` files inside `python/` have Java counterparts (see `port-coverage.en.md`); this checklist covers the ownership and status of the remaining 2353 `.md` files.
+All 14 `.py` files inside `python/` and 8 `.md` files have Java counterparts — 19 `.py` files in
+total once the referenced `scripts/*.py` and `examples/jsonrpc-agent/minimal.py` are counted
+(see `port-coverage.en.md`); this checklist covers the ownership and status of the remaining 2336 `.md` files.

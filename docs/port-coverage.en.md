@@ -8,9 +8,10 @@ in `deepseek-harness4j`, proving **nothing is omitted**. Method: enumerate all `
 files upstream with `find`, then verify each against this repository's files; at the
 function level, cross-check every Python class/function against its Java method.
 
-Conclusion: **all 19 `.py` files and all 8 `.md` files inside `python/` (the Python project
-itself) have Java counterparts**; the referenced repository scripts (`scripts/*.py`) and
-`examples/jsonrpc-agent/minimal.py` are ported too. Exceptions (e.g. `uv.lock`, `*.i18n.yaml`,
+Conclusion: **all 14 `.py` files and all 8 `.md` files inside `python/` (the Python project
+itself) have Java counterparts**; the referenced repository scripts (`scripts/*.py`, 3) and
+`examples/jsonrpc-agent/minimal.py` are ported too — 19 `.py` files covered in total.
+Exceptions (e.g. `uv.lock`, `*.i18n.yaml`,
 `sdk-runtime/package.json`) are metadata/build-manifest files, marked "no Java equivalent /
 replaced by Maven" with a reason.
 
@@ -175,5 +176,5 @@ For any project (in any language) to align with 100% of the Python SDK's capabil
    implementation spec.
 2. **[java-migration-notes.md](java-migration-notes.md)** — Python→Java differences and
    substitute semantics.
-3. `deepseek-harness4j-使用指南.md`, `sdk/README.en.md`, `sdk-runtime/README.en.md` — usage and
+3. `deepseek-harness4j-user-guide.en.md`, `sdk/README.en.md`, `sdk-runtime/README.en.md` — usage and
    runtime-carrier documentation.

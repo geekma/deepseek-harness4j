@@ -4,7 +4,7 @@
 
 本文件是**全局核对清单**：把上游 `deepseek-harness` 中**每一个 `.py` 文件、每一个 `.md` 文件**（以及相关的非代码文件）与 `deepseek-harness4j` 的 Java 对应物一一核对，确保**无遗漏**。核对方法：对上游做 `find . -name '*.py' -name '*.md'` 全量枚举，逐条比对本仓库文件；功能层面对照每个 Python 类/函数与 Java 方法。
 
-结论：**`python/` 目录（Python 项目本体）内 19 个 `.py` 文件与 8 个 `.md` 文件全部有 Java 对应物**；引用的仓库脚本（`scripts/*.py`）与 `examples/jsonrpc-agent/minimal.py` 一并移植。例外（如 `uv.lock`、`*.i18n.yaml`、`sdk-runtime/package.json`）为元数据/构建清单文件，已在表内标注"无 Java 等价物/由 Maven 取代"并说明理由。
+结论：**`python/` 目录（Python 项目本体）内 14 个 `.py` 文件与 8 个 `.md` 文件全部有 Java 对应物**；引用的仓库脚本（`scripts/*.py` 3 个）与 `examples/jsonrpc-agent/minimal.py` 一并移植，合计 19 个 `.py` 全数覆盖。例外（如 `uv.lock`、`*.i18n.yaml`、`sdk-runtime/package.json`）为元数据/构建清单文件，已在表内标注"无 Java 等价物/由 Maven 取代"并说明理由。
 
 ## 1. 核对基线（上游全量枚举）
 
