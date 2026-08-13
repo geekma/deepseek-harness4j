@@ -6,9 +6,13 @@ Follow the workflow for the contributor outcome you need: build runtime artifact
 
 ## Build runtime artifacts
 
+> **This section is for SDK contributors and release engineers only.** Regular Java SDK users should grab a pre-built carrier binary and follow [sdk-runtime/README.en.md](sdk-runtime/README.en.md). The steps below require the **upstream toolchain** (Node.js 22+ / pnpm), which is intentionally **not** a dependency of deepseek-harness4j.
+
 Platform executables are build artifacts and are not checked into git (they are injected into the runtime carrier by the upstream deepseek-harness build). Run the build from the **upstream repository root**:
 
 ```sh
+# Upstream build — requires Node.js 22+ and pnpm (not a Java SDK dependency)
+corepack enable
 pnpm install
 pnpm exec tsx scripts/build-exe-for-python-sdk.ts
 ```

@@ -72,65 +72,63 @@ In short: **dsh is essentially DeepSeek's take on Claude Code - a self-hostable,
 
 ## Install & Use
 
-### A. Run the Web UI via npm (fastest)
+### Prerequisites
 
-Prerequisite: Node.js is installed (the repo requires `node ^22.19 || >=24`).
+- **JDK 17+** (LTS; the code also runs on 21 / 25)
+- **Maven 3.9+**
+- A DeepSeek Harness runtime carrier (see [Runtime carrier setup](#runtime-carrier-setup) below, or [sdk-runtime README](sdk-runtime/README.en.md))
+
+### Build from source
 
 ```sh
-npx @deepseek-ai/dsh web
+git clone https://github.com/geekma/deepseek-harness4j.git
+cd deepseek-harness4j
+mvn install            # build all modules (sdk, spring-boot-starter, spring-boot-example)
+mvn test               # run tests (sdk module, 60 tests)
 ```
 
-- Default address: `http://127.0.0.1:3080`
-- First run: Settings -> Models, fill in your DeepSeek API key -> choose a workspace -> create a session and send a task.
+### Use as a Maven dependency
 
-### B. Build from source
+Add to your `pom.xml`:
+
+```xml
+<dependency>
+    <groupId>com.deepseek-ai</groupId>
+    <artifactId>deepseek-harness4j-sdk</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+</dependency>
+```
+
+### Runtime carrier setup
+
+The Java SDK communicates with the DeepSeek Harness runtime (`dsh-jsonrpc-agent`) over stdio JSON-RPC 2.0. The runtime binary is cross-built from the [upstream DeepSeek Harness repository](https://github.com/deepseek-ai/deepseek-harness) using the upstream toolchain (Node.js / pnpm). **Java SDK users only need the resulting binary — you do not need pnpm or Node.js to use deepseek-harness4j.**
+
+**Option A — Use a pre-built binary (recommended):** Download the `dsh-jsonrpc-agent-pkg-<platform>-<arch>` artifact from the upstream release page and place it in the runtime directory. See [sdk-runtime/README.en.md](sdk-runtime/README.en.md) for directory conventions and zero-config resolution.
+
+**Option B — Build from upstream source (requires Node.js 22+ and pnpm):**
 
 ```sh
+# Upstream build steps (uses upstream toolchain — not required for Java SDK consumers)
 git clone https://github.com/deepseek-ai/deepseek-harness.git
 cd deepseek-harness
-pnpm install
-pnpm run build
-pnpm dsh web          # start the Web UI
-```
-
-### C. Headless CLI for a single task
-
-```sh
-export DEEPSEEK_API_KEY=sk-xxx
-# To route through an OpenAI-compatible proxy:
-# export DEEPSEEK_BASE_URL=http://127.0.0.1:8000/v1
-pnpm dsh --profile headless "Summarize this repository and list its main packages."
-```
-
-### D. Java SDK (programmatic, deepseek-harness4j)
-
-This corresponds to upstream option D (Python SDK). On the Java side you pull in the SDK via Maven and need a runtime carrier (see the [sdk-runtime README](sdk-runtime/README.en.md)).
-
-```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
-cd deepseek-harness
-# 1) Build the runtime carrier (or install from a runtime distribution)
+corepack enable            # ensures pnpm is available
 pnpm install
 pnpm exec tsx scripts/build-exe-for-python-sdk.ts
-# 2) Place the generated dsh-jsonrpc-agent-pkg-<platform>-<arch> into the
-#    deepseek-harness4j runtime directory (see development.md)
+# Place the generated dsh-jsonrpc-agent-pkg-<platform>-<arch> into the
+# deepseek-harness4j runtime directory (see sdk-runtime/README)
 ```
 
-```sh
-export DEEPSEEK_API_KEY=sk-xxx
-# export DEEPSEEK_BASE_URL=http://127.0.0.1:8000/v1   # OpenAI-compatible proxy
-# export DSH_MODEL=deepseek-v4-flash
-```
+See [sdk-runtime/README.en.md](sdk-runtime/README.en.md) and [development.en.md](development.en.md) for detailed binary placement and distribution workflows.
 
-Maven coordinates: `com.deepseek-ai:deepseek-harness4j-sdk`.
+### Upstream companion clients
 
-Requirements: **JDK 17+** (LTS; the code also runs on 21 / 25), **Maven 3.9+**, and an available runtime carrier or an explicit channel.
+The upstream DeepSeek Harness project (not this Java SDK) also ships additional clients that share the same agent core, model configuration, and `cordis.yml` composition:
 
-```sh
-cd deepseek-harness4j
-mvn install            # build all modules (including spring-boot-starter / example)
-mvn test               # run tests (sdk module)
-```
+- **Web UI** (upstream): `npx @deepseek-ai/dsh web`
+- **Headless CLI** (upstream): `dsh --profile headless "task"`
+- **Python SDK** (upstream): `pip install deepseek-harness-sdk`
+
+The Java SDK in this repository uses the **same runtime and configuration** as the clients above — only the client language differs.
 
 ---
 
@@ -344,18 +342,17 @@ Key semantics:
 - `modelOverrides` patches one catalog model in place without replacing the whole list.
 - Supported request protocols include `openai-completions` / `openai-responses` / `anthropic` (exposed via `supportedProtocols()`); Bedrock / Vertex / Azure / Codex need their own native credentials and do not fit the API key field.
 
-#### Headless / CLI: use env vars to point at a custom endpoint
+#### Environment variables: point at a custom endpoint
 
-Skip `settings.yaml` and point the official DeepSeek adapter at your OpenAI-compatible proxy through env vars:
+Skip `settings.yaml` and point the official DeepSeek adapter at your OpenAI-compatible proxy through env vars. These are read by the runtime carrier regardless of which client language you use:
 
 ```sh
 export DEEPSEEK_API_KEY=sk-your-key
 export DEEPSEEK_BASE_URL=https://your-gateway.example.com/v1   # point at your endpoint
 export DSH_MODEL=your-custom-model-id
-pnpm dsh --profile headless "your task description"
 ```
 
-In the Java SDK, use `DEEPSEEK_BASE_URL` + `DEEPSEEK_API_KEY` the same way (the runtime inherits both).
+The Java SDK runtime inherits these environment variables automatically. A complete runnable Java example is in [Quick Start: Pointing at a custom / self-hosted model](#pointing-at-a-custom--self-hosted-model).
 
 ### Scenario 2: Catalog providers (Anthropic / OpenAI etc.)
 

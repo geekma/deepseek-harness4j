@@ -6,9 +6,13 @@
 
 ## 构建运行时产物
 
+> **本节仅面向 SDK 贡献者与发布工程师。** 普通 Java SDK 用户请下载预编译载体二进制，参考 [sdk-runtime/README.md](sdk-runtime/README.md)。以下步骤需要**上游工具链**（Node.js 22+ / pnpm），这故意**不是** deepseek-harness4j 的依赖。
+
 各平台可执行文件是构建产物，不检入 git（由上游 deepseek-harness 的构建注入到运行时载体）。请在**上游仓库根目录**运行构建：
 
 ```sh
+# 上游构建 — 需要 Node.js 22+ 与 pnpm（不属于 Java SDK 依赖）
+corepack enable
 pnpm install
 pnpm exec tsx scripts/build-exe-for-python-sdk.ts
 ```

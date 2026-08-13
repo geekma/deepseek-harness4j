@@ -1,12 +1,12 @@
-# DeepSeek Harness Java SDK（deepseek-harness4j）
-
-[English](README.md) | 中文
-
-**deepseek-harness4j** 是 DeepSeek Harness Python SDK 的 Java 移植版，通过 stdio 上的 JSON-RPC 2.0 驱动同一个 agent 运行时。一切皆插件，MIT 授权，开发者预览阶段。
-
-Java SDK 通过 stdio 上的按行分隔 JSON-RPC 2.0 与内置运行时（`dsh-jsonrpc-agent`）通信，驱动真实的 agent 循环（会话、系统提示词、工具、子代理、持久化）。**运行时、Cordis 插件组合（`cordis.yml`）、模型配置与上游完全一致，只换客户端语言。**
-
-> 使用前建议先读 [DeepSeek Harness 完整使用指南（Java 版）](deepseek-harness4j-使用指南.md)，其中含自定义模型接入、`cordis.yml` 组合、常见报错与实测记录。
+  1→# DeepSeek Harness Java SDK（deepseek-harness4j）
+  2→
+  3→[English](README.md) | 中文
+  4→
+  5→**deepseek-harness4j** 是 DeepSeek Harness Python SDK 的 Java 移植版，通过 stdio 上的 JSON-RPC 2.0 驱动同一个 agent 运行时。一切皆插件，MIT 授权，开发者预览阶段。
+  6→
+  7→Java SDK 通过 stdio 上的按行分隔 JSON-RPC 2.0 与内置运行时（`dsh-jsonrpc-agent`）通信，驱动真实的 agent 循环（会话、系统提示词、工具、子代理、持久化）。**运行时、Cordis 插件组合（`cordis.yml`）、模型配置与上游完全一致，只换客户端语言。**
+  8→
+  9→> 使用前建议先读 [DeepSeek Harness 完整使用指南（Java 版）](deepseek-harness4j-使用指南.md)，其中含自定义模型接入、`cordis.yml` 组合、常见报错与实测记录。
 
 ---
 
@@ -19,7 +19,7 @@ Java SDK 通过 stdio 上的按行分隔 JSON-RPC 2.0 与内置运行时（`dsh-
 - 核心设计理念：**一切皆插件（Everything is a plugin）**。会话、系统提示词、工具、agent 循环、LLM 接入、bash、文件系统、子进程、Web 能力、子代理、工作流……全部都是可插拔的 Cordis 插件。
 - 底层由 [Cordis](https://github.com/cordiverse/cordis) 驱动，其设计理念来自论文 [_A Programming Paradigm for Spatiotemporal Composability_](https://github.com/cordiverse/paper)。
 - 授权：**MIT License**。
-- 项目用 Node.js + TypeScript 编写，是 pnpm monorepo；另附带一个 Python SDK（`deepseek-harness-sdk`）。本仓库 `deepseek-harness4j` 提供对应的 **Java SDK**（逐行移植 Python SDK）。
+- 上游项目用 Node.js + TypeScript 编写，是 pnpm monorepo；另附带一个 Python SDK。本仓库 `deepseek-harness4j` 提供对应的 **Java SDK**（逐行移植 Python SDK）。
 
 ### 架构特点
 
@@ -69,70 +69,68 @@ Java SDK 通过 stdio 上的按行分隔 JSON-RPC 2.0 与内置运行时（`dsh-
 
 ## 安装与使用
 
-### 方式 A：通过 npm 直接跑 Web UI（最快）
+### 前置条件
 
-前提：已安装 Node.js（仓库要求 `node ^22.19 || >=24`）。
+- **JDK 17+**（LTS；代码亦可跑在 21 / 25 上）
+- **Maven 3.9+**
+- DeepSeek Harness 运行时载体（见下方[运行时载体安装](#运行时载体安装)，或 [sdk-runtime README](sdk-runtime/README.md)）
+
+### 从源码构建
 
 ```sh
-npx @deepseek-ai/dsh web
+git clone https://github.com/geekma/deepseek-harness4j.git
+cd deepseek-harness4j
+mvn install            # 构建全部模块（sdk / spring-boot-starter / spring-boot-example）
+mvn test               # 运行测试（sdk 模块，60 个用例）
 ```
 
-- 默认服务地址：`http://127.0.0.1:3080`
-- 首次进入：Settings -> Models 填入 DeepSeek API key -> 选择工作区 -> 新建会话发任务。
+### 作为 Maven 依赖引入
 
-### 方式 B：从源码运行
+在 `pom.xml` 中添加：
+
+```xml
+<dependency>
+    <groupId>com.deepseek-ai</groupId>
+    <artifactId>deepseek-harness4j-sdk</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+</dependency>
+```
+
+### 运行时载体安装
+
+Java SDK 通过 stdio 上的 JSON-RPC 2.0 与 DeepSeek Harness 运行时（`dsh-jsonrpc-agent`）通信。运行时二进制文件是从[上游 DeepSeek Harness 仓库](https://github.com/deepseek-ai/deepseek-harness)用上游工具链（Node.js / pnpm）交叉构建出来的。**Java SDK 的使用者只需要最终产物——不需要安装 pnpm 或 Node.js 就能使用 deepseek-harness4j。**
+
+**方案 A — 使用预编译二进制（推荐）：** 从上游 Release 页面下载 `dsh-jsonrpc-agent-pkg-<平台>-<架构>` 产物，放入运行时目录。目录约定与零配置解析规则见 [sdk-runtime/README.md](sdk-runtime/README.md)。
+
+**方案 B — 从上游源码构建（需要 Node.js 22+ 与 pnpm）：**
 
 ```sh
+# 上游构建步骤（使用上游工具链 — Java SDK 使用者不需要这一步）
 git clone https://github.com/deepseek-ai/deepseek-harness.git
 cd deepseek-harness
-pnpm install
-pnpm run build
-pnpm dsh web          # 启动 Web UI
-```
-
-### 方式 C：无头（Headless）CLI 跑单任务
-
-```sh
-export DEEPSEEK_API_KEY=sk-xxx
-# 若要走 OpenAI 兼容代理：
-# export DEEPSEEK_BASE_URL=http://127.0.0.1:8000/v1
-pnpm dsh --profile headless "Summarize this repository and list its main packages."
-```
-
-### 方式 D：Java SDK（编程调用，deepseek-harness4j）
-
-> 对应上游 Python SDK 方式 D；Java 侧使用 Maven 引入 SDK，并需要一个运行时载体（见 [sdk-runtime](sdk-runtime/README.md)）。
-
-构建运行时载体：
-
-```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
-cd deepseek-harness
+corepack enable            # 确保 pnpm 可用
 pnpm install
 pnpm exec tsx scripts/build-exe-for-python-sdk.ts
-# 把生成的 dsh-jsonrpc-agent-pkg-<平台>-<arch> 放到 deepseek-harness4j 的运行时目录（见 development.md）
+# 把生成的 dsh-jsonrpc-agent-pkg-<平台>-<arch> 放到
+# deepseek-harness4j 的运行时目录（见 sdk-runtime/README）
 ```
 
-设置凭据：
+产物放置位置与详细分发流程见 [sdk-runtime/README.md](sdk-runtime/README.md) 与 [development.md](development.md)。
 
-```sh
-export DEEPSEEK_API_KEY=sk-xxx
-# export DEEPSEEK_BASE_URL=http://127.0.0.1:8000/v1   # OpenAI 兼容代理时
-# export DSH_MODEL=deepseek-v4-flash
-```
+### 上游配套客户端
 
-引入 Maven 依赖（坐标 `com.deepseek-ai:deepseek-harness4j-sdk`）后即可编程调用，见下方[快速上手](#快速上手java-sdk)。
+上游 DeepSeek Harness 项目（非本 Java SDK）还提供以下客户端，它们与 Java SDK 共享同一个 agent 内核、模型配置和 `cordis.yml` 组合：
+
+- **Web UI**（上游）：`npx @deepseek-ai/dsh web`
+- **无头 CLI**（上游）：`dsh --profile headless "任务"`
+- **Python SDK**（上游）：`pip install deepseek-harness-sdk`
+
+本仓库的 Java SDK 使用与上述客户端**相同的运行时和配置**——只是客户端语言不同。
 
 ---
 
 ## 快速上手（Java SDK）
 
-环境要求：**JDK 17+**（LTS；代码亦可跑在 21 / 25 上），Maven 3.9+，以及一个可用的运行时载体或显式通道（见 [sdk-runtime](sdk-runtime/README.md)）。
-
-```sh
-cd deepseek-harness4j
-mvn install            # 构建全部模块（含 spring-boot-starter / example）
-mvn test               # 运行测试（sdk 模块）
 ```
 
 ### 最小示例
@@ -183,7 +181,7 @@ try (DeepSeekHarness harness = new DeepSeekHarness(DeepSeekHarnessConfig.builder
 
 | 参数 | 作用 |
 |---|---|
-| `provider` | 选择由哪个适配器注册的**提供方路由**（如 `deepseek-official`；自定义组合挂 `llm-pi-ai` 后可写任意 catalog 提供方） |
+| `provider` | 选择由哪个适配器注册的__提供方路由__（如 `deepseek-official`；自定义组合挂 `llm-pi-ai` 后可写任意 catalog 提供方） |
 | `model` | 该提供方解析的模型 id |
 | `maxTokens` | 根 agent 及其进程内后代的输出 token 上限；省略则用提供方默认值 |
 | `cordis` | 自定义插件组合文件路径（不传则用随包默认组合） |
@@ -204,7 +202,7 @@ try (DeepSeekHarness harness = new DeepSeekHarness(DeepSeekHarnessConfig.builder
 
 ## 自定义模型配置
 
-自定义模型 = **配置而非改代码**：设置 `DEEPSEEK_BASE_URL` 指向任意 OpenAI 兼容端点即可。分三种场景，难度递增：
+自定义模型 = __配置而非改代码__：设置 `DEEPSEEK_BASE_URL` 指向任意 OpenAI 兼容端点即可。分三种场景，难度递增：
 
 1. **OpenAI 兼容端点 / 公司网关 / 自建服务** —— 纯配置，最常用。
 2. **用已支持协议的提供方（Anthropic/OpenAI 等）** —— 填 key 即可。
@@ -214,7 +212,7 @@ try (DeepSeekHarness harness = new DeepSeekHarness(DeepSeekHarnessConfig.builder
 
 #### 环境变量方式（最简）
 
-不写 settings，直接通过环境变量让官方 DeepSeek 适配器走你的 OpenAI 兼容代理：
+不写 settings，直接通过环境变量让 DeepSeek 适配器走你的 OpenAI 兼容代理：
 
 ```sh
 export DEEPSEEK_API_KEY=sk-your-key
@@ -222,7 +220,16 @@ export DEEPSEEK_BASE_URL=https://your-gateway.example.com/v1   # 指向你的端
 export DSH_MODEL=your-custom-model-id
 ```
 
-在 Java SDK 里同样用 `DEEPSEEK_BASE_URL` + `DEEPSEEK_API_KEY`（运行时继承这两个变量）。
+Java SDK 运行时自动继承这些环境变量：
+
+```java
+try (DeepSeekHarness harness = new DeepSeekHarness(DeepSeekHarnessConfig.builder()
+        .provider("deepseek-official")
+        .model("your-custom-model-id")
+        .build())) {
+    System.out.println(harness.run("你的任务描述").finalResponse());
+}
+```
 
 三种接法：
 
@@ -320,7 +327,7 @@ Web UI：**Settings -> Models -> Add provider**，选择提供方、填 API key�
 
 如果你的模型走的是非 OpenAI 兼容的私有协议，就需要实现一个 `LlmAdapter`（参考仓库内 `packages/llm/llm-deepseek` 与 `packages/llm/llm-pi-ai` 两个完整实现）。
 
-> 适配器是 **TypeScript 插件**，运行在 dsh 运行时一侧；客户端语言（Python / Java / CLI）无需改动。Java SDK 调用方只需在 `cordis.yml` 里挂载该插件并选择对应 provider/model。
+> 适配器是 **TypeScript 插件**，运行在 dsh 运行时一侧；Java SDK 调用方无需改代码--只改 `cordis.yml` 挂载即可。
 
 最小骨架：
 

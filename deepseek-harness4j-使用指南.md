@@ -65,48 +65,54 @@
 
 ## 二、如何安装与使用
 
-### 2.1 方式 A:通过 npm 直接跑 Web UI(最快)
+> **本文件是 `deepseek-harness4j` Java SDK 的官方使用指南。** 第二章首先介绍 **Java SDK 的安装使用路径**（推荐主路径），其余方式（Web UI、CLI、源码运行）属于**上游配套客户端**，列在小节 2.2 供交叉参考。
 
-前提:已安装 Node.js(仓库要求 `node ^22.19 || >=24`)。
+### 2.1 方式 A:Java SDK(编程调用,deepseek-harness4j)⭐推荐
+
+#### 2.1.1 前置条件
+
+- **JDK 17+**（LTS；代码亦可跑在 21 / 25 上）
+- **Maven 3.9+**
+- 一个可用的 DeepSeek Harness 运行时载体（`dsh-jsonrpc-agent`）
+
+#### 2.1.2 从源码构建 SDK
 
 ```sh
-npx @deepseek-ai/dsh web
+git clone https://github.com/geekma/deepseek-harness4j.git
+cd deepseek-harness4j
+mvn install            # 构建全部模块（sdk / spring-boot-starter / spring-boot-example）
+mvn test               # 运行测试（sdk 模块，60 个用例）
 ```
 
-- 默认服务地址:`http://127.0.0.1:3080`
-- 首次进入:Settings → Models 填入 DeepSeek API key → 选择工作区 → 新建会话发任务。
+#### 2.1.3 作为 Maven 依赖引入
 
-### 2.2 方式 B:从源码运行
+```xml
+<dependency>
+    <groupId>com.deepseek-ai</groupId>
+    <artifactId>deepseek-harness4j-sdk</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+</dependency>
+```
+
+#### 2.1.4 准备运行时载体
+
+Java SDK 通过 stdio JSON-RPC 2.0 与 `dsh-jsonrpc-agent` 通信。**Java SDK 用户只需要最终二进制产物，不需要安装 pnpm 或 Node.js。**
+
+**方案 1 — 预编译二进制（推荐）：** 从上游 Release 页面下载 `dsh-jsonrpc-agent-pkg-<平台>-<架构>`，放入运行时目录。目录约定见 `sdk-runtime/README.md`。
+
+**方案 2 — 从上游源码构建（仅发布者/贡献者需要，需 Node.js 22+ / pnpm）：**
 
 ```sh
+# 上游构建步骤（使用上游工具链 — Java SDK 普通用户不需要）
 git clone https://github.com/deepseek-ai/deepseek-harness.git
 cd deepseek-harness
-pnpm install
-pnpm run build
-pnpm dsh web          # 启动 Web UI
-```
-
-### 2.3 方式 C:无头(Headless)CLI 跑单任务
-
-```sh
-export DEEPSEEK_API_KEY=sk-xxx
-# 若要走 OpenAI 兼容代理:
-# export DEEPSEEK_BASE_URL=http://127.0.0.1:8000/v1
-pnpm dsh --profile headless "Summarize this repository and list its main packages."
-```
-
-### 2.4 方式 D:Java SDK(编程调用,deepseek-harness4j)
-
-> 对应上游 Python SDK 方式 D;Java 侧使用 Maven 引入 SDK,并需要一个运行时载体(见 `deepseek-harness4j/sdk-runtime` README)。
-
-```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
-cd deepseek-harness
-# 1) 构建运行时载体(或从运行时分发安装)
+corepack enable
 pnpm install
 pnpm exec tsx scripts/build-exe-for-python-sdk.ts
-# 2) 把生成的 dsh-jsonrpc-agent-pkg-<平台>-<arch> 放到 deepseek-harness4j 的运行时目录(见 development.md)
+# 把生成的 dsh-jsonrpc-agent-pkg-<平台>-<arch> 放到 deepseek-harness4j 运行时目录
 ```
+
+#### 2.1.5 最小 Java 示例
 
 ```sh
 export DEEPSEEK_API_KEY=sk-xxx
@@ -115,7 +121,6 @@ export DEEPSEEK_API_KEY=sk-xxx
 ```
 
 ```java
-// deepseek-harness4j/sdk
 import com.deepseek.harness4j.DeepSeekHarness;
 import com.deepseek.harness4j.DeepSeekHarnessConfig;
 import com.deepseek.harness4j.RunResult;
@@ -131,6 +136,40 @@ try (DeepSeekHarness harness = new DeepSeekHarness(DeepSeekHarnessConfig.builder
     RunResult result = harness.run("Inspect the repo and fix the failing tests.", "example-001", null);
     System.out.println(result.finalResponse());
 }
+```
+
+### 2.2 上游配套客户端（交叉参考，非 Java SDK 路径）
+
+下列方式属于**上游 DeepSeek Harness 原生命令**，与 Java SDK 共享同一个运行时和模型配置，但客户端语言不同。交叉参考它们有助于理解配置、Web UI 设置界面、CLI 行为。
+
+#### 2.2.1 通过 npm 直接跑 Web UI(最快, 上游)
+
+前提:已安装 Node.js(仓库要求 `node ^22.19 || >=24`)。
+
+```sh
+npx @deepseek-ai/dsh web
+```
+
+- 默认服务地址:`http://127.0.0.1:3080`
+- 首次进入:Settings → Models 填入 DeepSeek API key → 选择工作区 → 新建会话发任务。
+
+#### 2.2.2 从源码运行上游项目(上游, 需 pnpm)
+
+```sh
+git clone https://github.com/deepseek-ai/deepseek-harness.git
+cd deepseek-harness
+pnpm install
+pnpm run build
+pnpm dsh web          # 启动 Web UI
+```
+
+#### 2.2.3 无头(Headless)CLI 跑单任务(上游)
+
+```sh
+export DEEPSEEK_API_KEY=sk-xxx
+# 若要走 OpenAI 兼容代理:
+# export DEEPSEEK_BASE_URL=http://127.0.0.1:8000/v1
+dsh --profile headless "Summarize this repository and list its main packages."
 ```
 
 ---
@@ -243,18 +282,18 @@ llm-pi-ai:
 - `modelOverrides` 是"就地改一个 catalog 模型",不替换整个列表。
 - 请求协议支持 `openai-completions` / `openai-responses` / `anthropic` 等(通过 `supportedProtocols()` 暴露);Bedrock / Vertex / Azure / Codex 需要各自原生凭据,不适合用 API key 字段。
 
-#### 3.1.3 无头/CLI 场景:直接用环境变量指向自定义端点
+#### 3.1.3 通过环境变量指向自定义端点
 
-不写 settings,直接通过环境变量让官方 DeepSeek 适配器走你的 OpenAI 兼容代理:
+运行时载体直接读取这几个环境变量（与客户端语言无关）：
 
 ```sh
 export DEEPSEEK_API_KEY=sk-your-key
 export DEEPSEEK_BASE_URL=https://your-gateway.example.com/v1   # 指向你的端点
 export DSH_MODEL=your-custom-model-id
-pnpm dsh --profile headless "你的任务描述"
 ```
 
-在 Java SDK 里同样用 `DEEPSEEK_BASE_URL` + `DEEPSEEK_API_KEY`(运行时继承这两个变量)。
+- **Java SDK：** 用 `DeepSeekHarnessConfig` 的 `provider("deepseek-official")` + `model("your-custom-model-id")`（完整示例见 2.1.5）。
+- **上游 CLI（交叉参考）：** `dsh --profile headless "你的任务描述"`。
 
 ### 3.2 场景二:使用目录提供方(Anthropic / OpenAI 等)
 
@@ -343,10 +382,25 @@ export function apply(ctx: Context, config: Config) {
 
 ---
 
-## 五、仓库常用命令(源码开发者)
+## 五、仓库常用命令
+
+### 5.1 deepseek-harness4j（本 Java 仓库）
 
 ```sh
-pnpm install            # 安装依赖
+# 构建与测试
+mvn clean install       # 构建全部模块（sdk / spring-boot-starter / spring-boot-example）到本地仓库
+mvn test                # 运行 sdk 模块的 JUnit 5 测试套件（60 个用例）
+mvn verify              # CI 门禁：含测试 + 校验
+mvn surefire-report:report -pl sdk   # 生成 HTML 测试报告（见 docs/test-report.md）
+
+# Spring Boot 示例运行
+cd spring-boot-example && mvn spring-boot:run
+```
+
+### 5.2 上游 deepseek-harness 仓库（源码开发者交叉参考，需 pnpm / Node.js）
+
+```sh
+pnpm install            # 安装依赖（上游工具链）
 pnpm run build          # 构建
 pnpm run test           # 单测
 pnpm run test:e2e       # 真实 API 测试(无 DEEPSEEK_API_KEY 会自动跳过)
@@ -354,7 +408,7 @@ pnpm run test:coverage  # CI 覆盖率门禁
 pnpm run typecheck / lint
 pnpm run demo:cordis    # 演示 agent 修改自身运行时(需要 key)
 pnpm run demo:acp       # ACP 自动化服务器(需要 DEEPSEEK_API_KEY)
-pnpm dsh --profile headless "task"
+dsh --profile headless "task"
 ```
 
 > Java 侧(deepseek-harness4j)对应命令见 `development.md`:`mvn install` / `mvn test`。
@@ -362,6 +416,28 @@ pnpm dsh --profile headless "task"
 ---
 
 ## 六、快速上手 Demo(推荐路径)
+
+### 6.1 Java SDK 快速上手（本仓库主路径）
+
+```sh
+# 1) 前置条件：JDK 17+ / Maven 3.9+ / 运行时载体（见 2.1.4）
+# 2) 构建 SDK
+cd deepseek-harness4j
+mvn install
+
+# 3) 设置凭据与自定义网关（可选）
+export DEEPSEEK_API_KEY=sk-xxx
+# export DEEPSEEK_BASE_URL=http://127.0.0.1:8000/v1   # 换成你的端点
+# export DSH_MODEL=your-custom-model-id
+
+# 4) 在 Java 代码里调用：
+#    - 添加 Maven 依赖 com.deepseek-ai:deepseek-harness4j-sdk
+#    - new DeepSeekHarness(config).run("你的任务描述")
+```
+
+改模型/改网关**不需要重启 Java 进程**，环境变量在下一次请求生效（或重新构建一个新的 `DeepSeekHarnessConfig`）。
+
+### 6.2 上游 Web UI 快速上手（交叉参考）
 
 ```sh
 # 1) 装好 Node.js(>=22)
@@ -454,9 +530,9 @@ Read the file src/main.ts, then write a test for it and run it.
 
 ---
 
-## 八、Demo 2:无头 CLI(Headless)跑单任务
+## 八、Demo 2:无头 CLI(Headless)跑单任务（上游 CLI, 交叉参考）
 
-**目标**:不打开浏览器,一条命令跑完一个 agent 任务。适合脚本化、CI。
+**目标**:不打开浏览器,一条命令跑完一个 agent 任务。适合脚本化、CI。对应 Java SDK 的等价编程调用见第二章 2.1.5。
 
 ```sh
 # 1) 设凭据(必填)
