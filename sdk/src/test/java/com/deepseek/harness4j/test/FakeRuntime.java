@@ -104,8 +104,8 @@ public final class FakeRuntime {
             case "initialize" -> {
                 switch (scenario) {
                     case "main-turn" -> {
-                        Files.writeString(Path.of(System.getenv("ENV_DUMP")), json(envDump()));
-                        Files.writeString(Path.of(System.getenv("INIT_DUMP")), json(params));
+                        writeDump(System.getenv("ENV_DUMP"), envDump());
+                        writeDump(System.getenv("INIT_DUMP"), params);
                     }
                     case "capture-cwd" -> {
                         Map<String, Object> capture = new LinkedHashMap<>();
@@ -267,6 +267,12 @@ public final class FakeRuntime {
 
     private static int TURN_COUNTER = 0;
 
+    private static void writeDump(String path, Object value) throws Exception {
+        if (path != null) {
+            Files.writeString(Path.of(path), json(value));
+        }
+    }
+
     private static Map<String, Object> envDump() {
         Map<String, Object> dump = new LinkedHashMap<>();
         dump.put("DEEPSEEK_API_KEY", System.getenv("DEEPSEEK_API_KEY"));
@@ -274,6 +280,7 @@ public final class FakeRuntime {
         dump.put("DSH_CWD", System.getenv("DSH_CWD"));
         dump.put("DSH_SESSION_ROOT", System.getenv("DSH_SESSION_ROOT"));
         dump.put("DSH_CORDIS_CONFIG", System.getenv("DSH_CORDIS_CONFIG"));
+        dump.put("DSH_SYSTEM_PROMPT", System.getenv("DSH_SYSTEM_PROMPT"));
         return dump;
     }
 

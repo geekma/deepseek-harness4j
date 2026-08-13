@@ -49,6 +49,107 @@
 | __ACP 服务端__（`apps/acp-agent`，Agent Client Protocol） | ✅ 另一条线路的程序化自动化服务端，含会话/权限/取消语义 | 📄 __不在范围——与语言无关的独立通道__ | ACP 是与 4j 无关的客户端协议；如需 ACP 语义继续使用上游 ACP 二进制即可。4j 的 JSON-RPC SDK 已覆盖同等功能面（跑任务、流式事件、取消、权限回调），只是走另一条线路。 |
 | __Spring Boot starter__（自动配置 + properties 绑定） | —（上游是 Python 生态，无 Spring 支持） | ✅ `spring-boot-starter` 模块提供 `DeepSeekHarnessProperties` + 自动装配 `DeepSeekHarness` Bean（由 Spring 管理生命周期） | __4j 独有能力__：原生 Spring 生态集成。Python SDK 只暴露原始类；4j 额外提供 `spring-boot-example`（Spring MVC REST Controller 封装 `run()`）。 |
 
+##### 使用示例（客户端通道）
+
+**Python SDK（上游参考）：**
+
+```python
+from deepseek_harness import DeepSeekHarness, DeepSeekHarnessConfig
+
+with DeepSeekHarness(DeepSeekHarnessConfig(model="deepseek-v4-flash")) as harness:
+    result = harness.run("Read package.json and print the list of scripts.")
+    print(result.final_response)
+```
+
+**Java SDK（本仓库核心调用，即 `sdk/.../examples/MinimalAgent.java`）：**
+
+```java
+import com.deepseek.harness4j.DeepSeekHarness;
+import com.deepseek.harness4j.DeepSeekHarnessConfig;
+import com.deepseek.harness4j.RunResult;
+
+public class MinimalAgent {
+    public static void main(String[] args) throws Exception {
+        try (DeepSeekHarness harness = new DeepSeekHarness(DeepSeekHarnessConfig.builder()
+                .provider("deepseek-official")
+                .model("deepseek-v4-flash")
+                .cwd("/absolute/path/workspace")
+                .sessionRoot("/absolute/path/sessions")
+                .build())) {
+            RunResult result = harness.run("Read package.json and print the list of scripts.");
+            System.out.println(result.finalResponse());   // final_response
+            System.out.println(result.finishReason());    // completed / max-tokens / error
+        }
+    }
+}
+```
+
+**Web UI（上游运行时侧，不在 4j 包内）：**
+
+```bash
+pnpm dsh web              # 在上游 monorepo 内
+# 或
+npx @deepseek-ai/dsh web
+# 打开 http://127.0.0.1:3080 —— 与 4j 共享 settings.yaml / 模型目录 / 会话存储 / cordis.yml
+```
+
+**Headless CLI（语义由 SDK `run()` 等价提供，CI 场景用一个小 `main` 封装）：**
+
+```java
+public final class HeadlessCli {
+    public static void main(String[] args) throws Exception {
+        try (DeepSeekHarness harness = new DeepSeekHarness()) {
+            System.out.println(harness.run(args[0]).finalResponse());
+        }
+    }
+}
+```
+
+**ACP 服务端（不在 4j 范围，继续用上游二进制）：**
+
+```bash
+# 上游 ACP 二进制（apps/acp-agent）
+npx @deepseek-ai/dsh acp
+```
+
+**Spring Boot starter（4j 独有）：**
+
+`application.yml`：
+
+```yaml
+deepseek:
+  harness:
+    enabled: true                     # 默认 true
+    model: deepseek-v4-flash
+    cwd: /absolute/path/workspace
+    session-root: /absolute/path/sessions
+    base-url: http://127.0.0.1:8000/v1   # 可选，OpenAI 兼容网关
+    api-key: ${DEEPSEEK_API_KEY}         # 可选，优先环境变量
+```
+
+REST 控制器（`spring-boot-example`）：
+
+```java
+@RestController
+@RequestMapping("/api/harness")
+public class HarnessController {
+
+    private final DeepSeekHarnessTemplate template;
+
+    public HarnessController(DeepSeekHarnessTemplate template) {
+        this.template = template;
+    }
+
+    @PostMapping("/run")
+    public RunResult run(@RequestBody RunRequest request) {
+        return template.run(request.input(), request.sessionId(), null);
+    }
+
+    public record RunRequest(String input, String sessionId) {
+    }
+}
+```
+
 #### 2. Cordis 插件框架与运行时 agent 能力（两者共用**同一套上游运行时二进制**——能力面全为 ✅）
 
 > "一切皆插件"是核心原则。**4j 没有把运行时插件重新在 Java 里实现——而是在子进程内加载**完全相同的**上游 TypeScript Cordis 插件。** 这是为何运行时侧所有功能项两列完全一致的原因：Java 客户端通过 stdio 的按行 JSON-RPC 2.0 与 `dsh-jsonrpc-agent` 通信，后者按 `cordis.yml` 组装出与上游完全相同的 Cordis 插件树。
@@ -69,6 +170,160 @@
 | __持久化__（JSONL 会话、语义检查点、zstd 默认压缩、上下文压缩） | ✅ `@deepseek-ai/dsh-persistence-*`、context compaction 插件 | ✅ 相同 | 使用配置中的 `DSH_SESSION_ROOT` / `sessionRoot`。Java 侧无任何持久化代码。 |
 | __审批 / 权限__（策略、审批 UI 提示、danger-full-access 覆盖） | ✅ policy + strategy 插件 | ✅ 相同 | 运行时侧，语言无关。 |
 | __沙箱 / 原生加固__（Linux landlock、macOS `node-pty` spawn helper） | ✅ 上游 `native/` addon、伴随 helper 文件 | ✅ 相同（随打包的运行时二进制携带） | 4j 不复制任何原生代码；匹配平台/架构的 `dsh-jsonrpc-agent` 编译产物已原生携带上述组件。 |
+
+##### 使用示例（运行时能力——Java 侧如何配置与消费）
+
+所有能力都在运行时子进程内执行；Java 侧只做**配置注入**（`DeepSeekHarnessConfig` / 环境变量 / `cordis.yml`）与**结果消费**（`RunResult` / `onNotification` 回调）。下面是每一项的最小用法。
+
+**会话管理（inbox、轮次边界、子代理谱系）：**
+
+```java
+// 同一 sessionId 复用持久会话；每次 run() 是一轮，以 turn/end 收尾
+try (DeepSeekHarness harness = new DeepSeekHarness()) {
+    RunResult first = harness.run("记录：本项目用 Maven 构建。", "session-1", null);
+    RunResult second = harness.run("我们用什么构建工具？", "session-1", null);
+    System.out.println(second.finalResponse());   // 回答 Maven
+}
+```
+
+**系统提示词（部署人格，无需 Java 代码）：**
+
+```java
+DeepSeekHarnessConfig config = DeepSeekHarnessConfig.builder()
+        .env(Map.of("DSH_SYSTEM_PROMPT", "你是一名严谨的 Java 代码审查助手。"))
+        .build();
+```
+
+**工具系统（运行时侧 TypeScript 插件，通过 `cordis.yml` 挂载）：**
+
+```yaml
+# 自定义 cordis.yml：挂载上游 str-replace-editor 文件编辑器工具
+- id: str-replace-editor
+  name: '@deepseek-ai/dsh-tool-str-replace-editor'
+  config:
+    maxOutputChars: 16000
+```
+
+```java
+// Java 侧只消费工具调用产生的结构化事件
+RunResult result = harness.run("把 README 的标题改成英文。", "session-2",
+        notification -> {
+            if ("session.event".equals(notification.method())) {
+                // payload 内每个 event 的 type 为 plan / observe / tool / message 等
+            }
+        });
+```
+
+**Agent 循环（plan / observe / tool / message；只消费 `RunResult`，不控制循环内部）：**
+
+```java
+RunResult result = harness.run("修复编译错误。", "session-3", null);
+System.out.println(result.finishReason());              // completed / max-tokens / error
+for (Map<String, Object> event : result.events()) {     // 逐条事件流
+    System.out.println(event.get("type") + " -> " + event.get("data"));
+}
+```
+
+**LLM 接入与适配器（`DEEPSEEK_API_KEY` / `DEEPSEEK_BASE_URL` / `DSH_MODEL`，配置而非代码）：**
+
+```java
+DeepSeekHarnessConfig config = DeepSeekHarnessConfig.builder()
+        .provider("deepseek-official")                 // 或 dsh-llm-pi-ai 指向 OpenAI 兼容网关
+        .model("deepseek-v4-flash")
+        .apiKey(System.getenv("DEEPSEEK_API_KEY"))
+        .baseUrl(System.getenv().getOrDefault("DEEPSEEK_BASE_URL", ""))
+        .maxTokens(2048)
+        .build();
+```
+
+**Bash / Shell（持久化 PTY，owner 作用域，danger-full-access 策略）：**
+
+```java
+// 运行时 fork 本地 shell；工具结果以结构化 RunResult 事件返回，Java 不接触 PTY 字节
+RunResult result = harness.run("运行 mvn -q test 并汇报失败的用例。");
+for (Map<String, Object> event : result.events()) {
+    if ("assistant/message".equals(event.get("type"))) {
+        System.out.println(event.get("data"));
+    }
+}
+```
+
+**文件系统（工作区 = `DSH_CWD`，由 `cwd()` 注入）：**
+
+```java
+DeepSeekHarnessConfig config = DeepSeekHarnessConfig.builder()
+        .cwd("/absolute/path/to/workspace")            // 成为运行时 DSH_CWD
+        .build();
+// 模型即可通过 str-replace-editor 工具读写该工作区
+```
+
+**子进程派生（前台进程、信号传递，运行时侧）：**
+
+```java
+// 无 Java 侧代码；子进程由 dsh-subprocess-local 插件管理
+// 需要观察子代理时用 onNotification 回调（见下）
+```
+
+**Web / 网络能力（`cordis.yml` 挂载即生效）：**
+
+```yaml
+- id: web
+  name: '@deepseek-ai/dsh-web'
+```
+
+**多代理编排（`toolName: subagent`、并行 agent、谱系追踪，经 `onNotification` 送达）：**
+
+```java
+RunResult result = harness.run("用子代理并行分析两个模块。", "session-4", notification -> {
+    switch (notification.method()) {
+        case "subagent.started" -> System.out.println(
+                "子代理启动 child=" + notification.payload().get("childSessionId")
+                + " parent=" + notification.payload().get("parentSessionId"));
+        case "subagent.finished" -> System.out.println(
+                "子代理完成 child=" + notification.payload().get("childSessionId")
+                + " status=" + notification.payload().get("status"));
+        default -> { }
+    }
+});
+```
+
+**工作流 / plan / todo-write（结构化中途计划，运行时侧）：**
+
+```yaml
+# 自定义 cordis.yml 中挂载 plan-mode 插件与 todo / workflow 工具
+- id: plan-mode
+  name: '@deepseek-ai/dsh-plan-mode'
+- id: tool-todo
+  name: '@deepseek-ai/dsh-tool-todo'
+- id: tool-workflow
+  name: '@deepseek-ai/dsh-tool-workflow'
+```
+
+**持久化（JSONL 会话、语义检查点、zstd 压缩，`sessionRoot` / `DSH_SESSION_ROOT`）：**
+
+```java
+DeepSeekHarnessConfig config = DeepSeekHarnessConfig.builder()
+        .sessionRoot("/absolute/path/to/sessions")     // 即 DSH_SESSION_ROOT
+        .build();
+// 运行后该目录下生成按会话组织的 .jsonl.zstd 会话日志，Java 侧无持久化代码
+```
+
+**审批 / 权限（策略、danger-full-access 覆盖，运行时侧）：**
+
+```yaml
+# 自定义 cordis.yml 中显式选择宽松策略（与上游 minimal.cordis.yml 一致）
+- id: sandbox-policy
+  name: '@deepseek-ai/dsh-sandbox-policy'
+  config:
+    mode: danger-full-access
+```
+
+**沙箱 / 原生加固（随打包的运行时二进制携带）：**
+
+```java
+// 无需 Java 代码。匹配平台/架构的 dsh-jsonrpc-agent 二进制已原生携带
+// Linux landlock / macOS node-pty spawn helper。
+```
 
 **为何 4j 不把运行时插件移植为 Java：** 插件基于 Cordis effect 模型（注册/注销与 fiber 生命周期绑定）、强 schema、共享运行时事件总线。将它们改写为 Java 等于"把上游整台引擎换语言重写一遍"——N 倍工作量、零功能收益。相反，4j 直接随包携带同一份经验证的 `dsh-jsonrpc-agent` 二进制并通过 JSON-RPC 驱动，**确保**与 Python SDK 调用方**语义、配置面、模型输出完全相同**。
 

@@ -51,6 +51,107 @@ The following matrix contrasts the **upstream** `deepseek-ai/deepseek-harness` (
 | **ACP server** (`apps/acp-agent`, Agent Client Protocol) | ✅ programmatic automation server with session/permission/cancellation over a separate wire protocol | 📄 **out of scope — language-neutral channel** | ACP is a client protocol independent of 4j; keep using the upstream ACP binary if you need ACP semantics. 4j's JSON-RPC SDK covers the same functional surface (run task, stream events, cancel, permission callbacks) via its own wire. |
 | **Spring Boot starter** (auto-config + properties binding) | — (no Spring support upstream) | ✅ `spring-boot-starter` module ships `DeepSeekHarnessProperties` + auto-configures a `DeepSeekHarness` bean (lifecycle managed by Spring) | **4j-exclusive addition**: idiomatic Spring integration. The Python SDK ships raw classes only; 4j adds a `spring-boot-example` with a Spring MVC REST controller wrapping `run()`. |
 
+##### Usage examples (client channels)
+
+**Python SDK (upstream reference):**
+
+```python
+from deepseek_harness import DeepSeekHarness, DeepSeekHarnessConfig
+
+with DeepSeekHarness(DeepSeekHarnessConfig(model="deepseek-v4-flash")) as harness:
+    result = harness.run("Read package.json and print the list of scripts.")
+    print(result.final_response)
+```
+
+**Java SDK (this repo's core call, i.e. `sdk/.../examples/MinimalAgent.java`):**
+
+```java
+import com.deepseek.harness4j.DeepSeekHarness;
+import com.deepseek.harness4j.DeepSeekHarnessConfig;
+import com.deepseek.harness4j.RunResult;
+
+public class MinimalAgent {
+    public static void main(String[] args) throws Exception {
+        try (DeepSeekHarness harness = new DeepSeekHarness(DeepSeekHarnessConfig.builder()
+                .provider("deepseek-official")
+                .model("deepseek-v4-flash")
+                .cwd("/absolute/path/workspace")
+                .sessionRoot("/absolute/path/sessions")
+                .build())) {
+            RunResult result = harness.run("Read package.json and print the list of scripts.");
+            System.out.println(result.finalResponse());   // final_response
+            System.out.println(result.finishReason());    // completed / max-tokens / error
+        }
+    }
+}
+```
+
+**Web UI (upstream runtime-side, not shipped in 4j):**
+
+```bash
+pnpm dsh web              # inside the upstream monorepo
+# or
+npx @deepseek-ai/dsh web
+# open http://127.0.0.1:3080 — shares settings.yaml / models catalog / session store / cordis.yml with 4j
+```
+
+**Headless CLI (semantics provided by SDK `run()`; wrap it in a small `main` for CI):**
+
+```java
+public final class HeadlessCli {
+    public static void main(String[] args) throws Exception {
+        try (DeepSeekHarness harness = new DeepSeekHarness()) {
+            System.out.println(harness.run(args[0]).finalResponse());
+        }
+    }
+}
+```
+
+**ACP server (out of 4j scope; keep using the upstream binary):**
+
+```bash
+# upstream ACP binary (apps/acp-agent)
+npx @deepseek-ai/dsh acp
+```
+
+**Spring Boot starter (4j-exclusive):**
+
+`application.yml`:
+
+```yaml
+deepseek:
+  harness:
+    enabled: true                     # default true
+    model: deepseek-v4-flash
+    cwd: /absolute/path/workspace
+    session-root: /absolute/path/sessions
+    base-url: http://127.0.0.1:8000/v1   # optional, OpenAI-compatible gateway
+    api-key: ${DEEPSEEK_API_KEY}         # optional, prefer env credentials
+```
+
+REST controller (from `spring-boot-example`):
+
+```java
+@RestController
+@RequestMapping("/api/harness")
+public class HarnessController {
+
+    private final DeepSeekHarnessTemplate template;
+
+    public HarnessController(DeepSeekHarnessTemplate template) {
+        this.template = template;
+    }
+
+    @PostMapping("/run")
+    public RunResult run(@RequestBody RunRequest request) {
+        return template.run(request.input(), request.sessionId(), null);
+    }
+
+    public record RunRequest(String input, String sessionId) {
+    }
+}
+```
+
 #### 2. Cordis plugin framework & runtime agent capabilities (powered by the same upstream runtime binary in both projects — ✅ across the board)
 
 > "Everything is a plugin" is the core principle. **4j does not reimplement these plugins in Java — it loads the exact same upstream TypeScript Cordis plugins inside the runtime subprocess.** That is why the columns are identical for every runtime-side feature: the Java client talks newline-delimited JSON-RPC 2.0 over stdio to `dsh-jsonrpc-agent`, which composes the same Cordis plugin tree described by `cordis.yml`.
@@ -71,6 +172,162 @@ The following matrix contrasts the **upstream** `deepseek-ai/deepseek-harness` (
 | **Persistence** (JSONL sessions, semantic checkpoints, zstd default, compaction) | ✅ `@deepseek-ai/dsh-persistence-*`, context compaction plugin | ✅ same | Uses `DSH_SESSION_ROOT` / `sessionRoot` from config. Zero Java-side persistence code. |
 | **Approval / permission** (policies, approval UI prompt, danger-full-access override) | ✅ policy + strategy plugins | ✅ same | Runtime-side, language-neutral. |
 | **Sandbox / native hardening** (landlock on Linux, `node-pty` spawn helper on macOS) | ✅ upstream `native/` addon, spawn helpers | ✅ same (bundled runtime carries them) | 4j copies no native code; the compiled `dsh-jsonrpc-agent` binary ships it for the matching platform/arch. |
+
+##### Usage examples (runtime capabilities — how the Java side configures and consumes them)
+
+All capabilities run inside the runtime subprocess; the Java side only does **config injection** (`DeepSeekHarnessConfig` / env vars / `cordis.yml`) and **result consumption** (`RunResult` / `onNotification` callback). Minimal usage for each:
+
+**Session management (inbox, turn boundaries, subagent ancestry):**
+
+```java
+// Reuse a durable session by id; each run() is one turn ending at turn/end
+try (DeepSeekHarness harness = new DeepSeekHarness()) {
+    RunResult first = harness.run("Remember: this project builds with Maven.", "session-1", null);
+    RunResult second = harness.run("What build tool do we use?", "session-1", null);
+    System.out.println(second.finalResponse());   // answers Maven
+}
+```
+
+**System prompts (deployment persona, no Java code needed):**
+
+```java
+DeepSeekHarnessConfig config = DeepSeekHarnessConfig.builder()
+        .env(Map.of("DSH_SYSTEM_PROMPT", "You are a rigorous Java code reviewer."))
+        .build();
+```
+
+**Tools (runtime-side TypeScript plugins, mounted via `cordis.yml`):**
+
+```yaml
+# custom cordis.yml: mount the upstream str-replace-editor file-editing tool
+- id: str-replace-editor
+  name: '@deepseek-ai/dsh-tool-str-replace-editor'
+  config:
+    maxOutputChars: 16000
+```
+
+```java
+// Java only consumes the structured events produced by tool calls
+RunResult result = harness.run("Change the README title to English.", "session-2",
+        notification -> {
+            if ("session.event".equals(notification.method())) {
+                // each event inside payload has a type: plan / observe / tool / message ...
+            }
+        });
+```
+
+**Agent loop (plan / observe / tool / message; consume `RunResult`, never control loop internals):**
+
+```java
+RunResult result = harness.run("Fix the compile errors.", "session-3", null);
+System.out.println(result.finishReason());              // completed / max-tokens / error
+for (Map<String, Object> event : result.events()) {     // the full event stream
+    System.out.println(event.get("type") + " -> " + event.get("data"));
+}
+```
+
+**LLM access & adapters (`DEEPSEEK_API_KEY` / `DEEPSEEK_BASE_URL` / `DSH_MODEL`, configuration not code):**
+
+```java
+DeepSeekHarnessConfig config = DeepSeekHarnessConfig.builder()
+        .provider("deepseek-official")                 // or dsh-llm-pi-ai pointing at an OpenAI-compatible gateway
+        .model("deepseek-v4-flash")
+        .apiKey(System.getenv("DEEPSEEK_API_KEY"))
+        .baseUrl(System.getenv().getOrDefault("DEEPSEEK_BASE_URL", ""))
+        .maxTokens(2048)
+        .build();
+```
+
+**Bash / shell (persistent PTY, owner-scoped, danger-full-access strategy):**
+
+```java
+// runtime forks the native shell; tool results come back as structured RunResult events,
+// Java never touches PTY bytes
+RunResult result = harness.run("Run mvn -q test and report the failing cases.");
+for (Map<String, Object> event : result.events()) {
+    if ("assistant/message".equals(event.get("type"))) {
+        System.out.println(event.get("data"));
+    }
+}
+```
+
+**Filesystem (workspace = `DSH_CWD`, injected via `cwd()`):**
+
+```java
+DeepSeekHarnessConfig config = DeepSeekHarnessConfig.builder()
+        .cwd("/absolute/path/to/workspace")            // becomes DSH_CWD in the runtime
+        .build();
+// the model can then read/write that workspace through the str-replace-editor tool
+```
+
+**Subprocess spawning (foreground, signal propagation, runtime-side):**
+
+```java
+// no Java-side code; subprocesses are managed by the dsh-subprocess-local plugin
+// observe subagents via the onNotification callback when needed (see below)
+```
+
+**Web / network capabilities (mounted in `cordis.yml` to take effect):**
+
+```yaml
+- id: web
+  name: '@deepseek-ai/dsh-web'
+```
+
+**Sub-agent orchestration (`toolName: subagent`, parallel agents, ancestry — delivered via `onNotification`):**
+
+```java
+RunResult result = harness.run("Analyze two modules in parallel with subagents.", "session-4", notification -> {
+    switch (notification.method()) {
+        case "subagent.started" -> System.out.println(
+                "subagent started child=" + notification.payload().get("childSessionId")
+                + " parent=" + notification.payload().get("parentSessionId"));
+        case "subagent.finished" -> System.out.println(
+                "subagent finished child=" + notification.payload().get("childSessionId")
+                + " status=" + notification.payload().get("status"));
+        default -> { }
+    }
+});
+```
+
+**Workflows / plan / todo-write (structured mid-run planning, runtime-side):**
+
+```yaml
+# in your custom cordis.yml, mount the plan-mode plugin and the todo / workflow tools
+- id: plan-mode
+  name: '@deepseek-ai/dsh-plan-mode'
+- id: tool-todo
+  name: '@deepseek-ai/dsh-tool-todo'
+- id: tool-workflow
+  name: '@deepseek-ai/dsh-tool-workflow'
+```
+
+**Persistence (JSONL sessions, semantic checkpoints, zstd compression, `sessionRoot` / `DSH_SESSION_ROOT`):**
+
+```java
+DeepSeekHarnessConfig config = DeepSeekHarnessConfig.builder()
+        .sessionRoot("/absolute/path/to/sessions")     // i.e. DSH_SESSION_ROOT
+        .build();
+// after running, .jsonl.zstd session logs appear under that directory, organized by session;
+// zero Java-side persistence code
+```
+
+**Approval / permission (policies, danger-full-access override, runtime-side):**
+
+```yaml
+# in your custom cordis.yml, explicitly select the permissive policy (same as upstream minimal.cordis.yml)
+- id: sandbox-policy
+  name: '@deepseek-ai/dsh-sandbox-policy'
+  config:
+    mode: danger-full-access
+```
+
+**Sandbox / native hardening (carried by the bundled runtime binary):**
+
+```java
+// no Java code needed. The platform/arch-matched dsh-jsonrpc-agent binary already ships
+// Linux landlock / macOS node-pty spawn helper.
+```
 
 **Why 4j does not port runtime plugins to Java:** plugins are Cordis effect-based (register/unregister tied to fiber lifecycle), schema-typed, and speak a shared runtime event bus. Rewriting them to Java would be "rewriting the upstream engine in a new language" — an N× effort with zero functional gain. Instead, 4j ships the same verified `dsh-jsonrpc-agent` binary and uses JSON-RPC to drive it, guaranteeing **exactly identical** semantics, config surface, and model outputs to Python SDK callers.
 
@@ -590,7 +847,7 @@ try (DeepSeekHarness harness = new DeepSeekHarness(DeepSeekHarnessConfig.builder
 - **Add/remove tools**: add a `toolBash` / `toolSkill` / `toolJobs` plugin line; flip the matching `toolXxx: false` in `agent-spine` to `true` or remove it.
 - **Change the system prompt**: the `persona` field.
 - **Enable skills**: `skills.enabled: true` (and configure a `skill-filesystem` provider).
-- **Add subagents / workflows / plans**: add `dsh-subagent`, `dsh-workflow`, `dsh-plan` plugins to the composition.
+- **Add subagents / workflows / plans**: add `dsh-tool-subagent`, `dsh-workflow`, `dsh-plan-mode`, `dsh-tool-todo` plugins to the composition.
 - **Change the sandbox level**: toggle `sandbox-policy.mode` between `danger-full-access` and restricted modes (tightening is strongly recommended for production).
 
 > Principle: changing the composition (`cordis.yml`) **takes precedence over** changing code. Almost any behavior can be adjusted by "which plugin to load + what config to give it" without touching `agent-loop`. Java SDK callers follow the same principle.
