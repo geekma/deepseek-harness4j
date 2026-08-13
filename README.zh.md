@@ -1,12 +1,12 @@
-  1→# DeepSeek Harness Java SDK（deepseek-harness4j）
-  2→
-  3→[English](README.md) | 中文
-  4→
-  5→**deepseek-harness4j** 是 DeepSeek Harness Python SDK 的 Java 移植版，通过 stdio 上的 JSON-RPC 2.0 驱动同一个 agent 运行时。一切皆插件，MIT 授权，开发者预览阶段。
-  6→
-  7→Java SDK 通过 stdio 上的按行分隔 JSON-RPC 2.0 与内置运行时（`dsh-jsonrpc-agent`）通信，驱动真实的 agent 循环（会话、系统提示词、工具、子代理、持久化）。**运行时、Cordis 插件组合（`cordis.yml`）、模型配置与上游完全一致，只换客户端语言。**
-  8→
-  9→> 使用前建议先读 [DeepSeek Harness 完整使用指南（Java 版）](deepseek-harness4j-使用指南.md)，其中含自定义模型接入、`cordis.yml` 组合、常见报错与实测记录。
+1→# DeepSeek Harness Java SDK（deepseek-harness4j）
+2→
+3→[English](README.md) | 中文
+4→
+5→**deepseek-harness4j** 是 DeepSeek Harness Python SDK 的 Java 移植版，通过 stdio 上的 JSON-RPC 2.0 驱动同一个 agent 运行时。一切皆插件，MIT 授权，开发者预览阶段。
+6→
+7→Java SDK 通过 stdio 上的按行分隔 JSON-RPC 2.0 与内置运行时（`dsh-jsonrpc-agent`）通信，驱动真实的 agent 循环（会话、系统提示词、工具、子代理、持久化）。**运行时、Cordis 插件组合（`cordis.yml`）、模型配置与上游完全一致，只换客户端语言。**
+8→
+9→> 使用前建议先读 [DeepSeek Harness 完整使用指南（Java 版）](deepseek-harness4j-使用指南.md)，其中含自定义模型接入、`cordis.yml` 组合、常见报错与实测记录。
 
 ---
 
@@ -131,9 +131,8 @@ pnpm exec tsx scripts/build-exe-for-python-sdk.ts
 
 ## 快速上手（Java SDK）
 
-```
+```java
 
-### 最小示例
 
 ```java
 import com.deepseek.harness4j.DeepSeekHarness;
@@ -539,7 +538,8 @@ class HarnessController {
 ```ini
 deepseek-harness4j/
 ├── README.md                 # 项目说明（英文）；README.zh.md（中文，本文件）
-├── deepseek-harness4j-使用指南.md  # 完整使用指南（Java 版）
+├── deepseek-harness4j-使用指南.md       # 完整使用指南（中文）
+├── deepseek-harness4j-user-guide.en.md  # 完整使用指南（英文）— 互相链接
 ├── docs/
 │   ├── port-coverage.md(.en.md)              # 移植覆盖清单：每个 .py/.md -> Java 对应物，零遗漏
 │   ├── repo-inventory.md(.en.md)             # 全仓库索引：上游所有区域 md/py 归属与状态
@@ -587,6 +587,7 @@ deepseek-harness4j/
 |---|---|
 | [README.md](README.md) | 英文版项目说明 |
 | [deepseek-harness4j-使用指南.md](deepseek-harness4j-使用指南.md) | 完整使用指南（背景/安装/自定义模型/组合/Demo/实测/架构解读，Java 版） |
+| [deepseek-harness4j-user-guide.en.md](deepseek-harness4j-user-guide.en.md) | 完整使用指南（英文版，与中文版互相链接） |
 | [docs/port-coverage.md](docs/port-coverage.md) | **移植覆盖清单**：上游每个 .py/.md 与 Java 对应物的逐条核对，零遗漏证明 |
 | [docs/repo-inventory.md](docs/repo-inventory.md) | **全仓库索引**：上游所有区域 md/py 归属与状态 |
 | [docs/python-sdk-api-reference.md](docs/python-sdk-api-reference.md) | **公开规格**：Python SDK 100% 功能的 API 与 JSON-RPC 线上协议，供其他项目实现等价客户端 |

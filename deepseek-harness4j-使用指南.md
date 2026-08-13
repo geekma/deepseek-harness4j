@@ -1,5 +1,7 @@
 # DeepSeek Harness (`dsh`) 完整使用指南（deepseek-harness4j Java 版）
 
+[English](deepseek-harness4j-user-guide.en.md) | 中文
+
 > 本文件是仓库 `deepseek-harness-使用指南.md`（基于 GitHub 仓库 `deepseek-ai/deepseek-harness`(master 分支) 的源码与官方文档阅读整理）的 **Java 移植**：所有 Python SDK 示例改写为 Java（`deepseek-harness4j`），Node/CLI 与 Cordis 组合（`cordis.yml`）部分保持不变——因为它们驱动的是同一套运行时。
 > 最后核对时间:2026-08-13。**注意:该项目处于开发者预览(developer preview)阶段,迭代很快,存在破坏兼容性的变更,使用前请以官方文档为准。**
 

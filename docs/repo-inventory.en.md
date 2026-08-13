@@ -58,7 +58,7 @@ All 14 `.py` files and all 8 `.md` files have Java counterparts; the line-by-lin
 
 | Upstream doc | Nature | Where it lands in 4j |
 |---|---|---|
-| `docs/architecture.md` | core architecture map (composition/core packages/loop/seams/extension points) | deep-dive in `deepseek-harness4j-使用指南.md` §16 |
+| `docs/architecture.md` | core architecture map (composition/core packages/loop/seams/extension points) | deep-dive in `deepseek-harness4j-user-guide.en.md` §16 |
 | `docs/cordis-primer.md` / `docs/cordis-tutorial/` | Cordis composition syntax/tutorial | language-neutral; referenced by the guide and user-guide |
 | `docs/development.md` | contributor setup/daily/CI | ported as `development.md` (.en) |
 | `docs/testing.md` | testing policy | language-neutral; 4j tests in `development.md` |

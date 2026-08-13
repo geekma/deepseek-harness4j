@@ -16,14 +16,7 @@
 
 ## 安装 SDK
 
-克隆上游仓库获取其可运行示例，然后引入 SDK 依赖（构建运行时载体见 `development.md`）：
-
-```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
-cd deepseek-harness
-pnpm install
-pnpm exec tsx scripts/build-exe-for-python-sdk.ts   # 构建运行时载体，产物放入 deepseek-harness4j 运行时目录
-```
+### 引入 Maven 依赖
 
 ```xml
 <dependency>
@@ -33,7 +26,25 @@ pnpm exec tsx scripts/build-exe-for-python-sdk.ts   # 构建运行时载体，�
 </dependency>
 ```
 
-已安装的运行时无需系统 Node.js。需要从源码构建运行时或分发的仓库贡献者，参见 [开发工作流](../../development.md)。
+或 Gradle：
+
+```groovy
+implementation 'com.deepseek-ai:deepseek-harness4j-sdk:0.0.1-SNAPSHOT'
+```
+
+### 从源码构建
+
+```sh
+git clone https://github.com/geekma/deepseek-harness4j.git
+cd deepseek-harness4j
+mvn install            # 构建全部模块（sdk / spring-boot-starter / spring-boot-example）
+```
+
+### 准备运行时载体
+
+Java SDK 通过 stdio JSON-RPC 2.0 与 `dsh-jsonrpc-agent` 通信。**普通用户只需下载预编译二进制**（见 [sdk-runtime README](../../sdk-runtime/README.md)），无需安装 Node.js / pnpm。
+
+仅发布者/贡献者需要从上游源码构建载体（需 Node.js 22+ / pnpm），见 [开发工作流](../../development.md)。
 
 ## 运行检入示例
 

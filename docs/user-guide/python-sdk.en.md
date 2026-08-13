@@ -16,14 +16,7 @@ This tutorial is the programmatic alternative to the Web UI. It installs the pub
 
 ## Install the SDK
 
-Clone the repository for its runnable example, then add the SDK dependency (build the runtime carrier per `development.en.md`):
-
-```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
-cd deepseek-harness
-pnpm install
-pnpm exec tsx scripts/build-exe-for-python-sdk.ts   # build the runtime carrier; place the output in the deepseek-harness4j runtime directory
-```
+### Add the Maven dependency
 
 ```xml
 <dependency>
@@ -33,7 +26,25 @@ pnpm exec tsx scripts/build-exe-for-python-sdk.ts   # build the runtime carrier;
 </dependency>
 ```
 
-The installed runtime needs no system Node.js. Repository contributors who need to build the runtime or distributions from source should use the [contributor workflows](../../development.en.md).
+or Gradle:
+
+```groovy
+implementation 'com.deepseek-ai:deepseek-harness4j-sdk:0.0.1-SNAPSHOT'
+```
+
+### Build from source
+
+```sh
+git clone https://github.com/geekma/deepseek-harness4j.git
+cd deepseek-harness4j
+mvn install            # build all modules (sdk / spring-boot-starter / spring-boot-example)
+```
+
+### Prepare the runtime carrier
+
+The Java SDK communicates with `dsh-jsonrpc-agent` over stdio JSON-RPC 2.0. **Regular users only need to download a pre-built binary** (see [sdk-runtime README](../../sdk-runtime/README.en.md)); no Node.js / pnpm is required.
+
+Contributors / release engineers who need to build the carrier from upstream source (requires Node.js 22+ / pnpm) should follow the [contributor workflows](../../development.en.md).
 
 ## Run the checked-in example
 

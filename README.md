@@ -8,7 +8,7 @@ DeepSeek Harness (command `dsh`) is an **agent harness** whose core design princ
 
 > This project is in **developer preview**: it iterates fast and may ship breaking changes. Always check the official docs before relying on it.
 
-Before using the SDK, read the [DeepSeek Harness complete guide (Java edition)](deepseek-harness4j-使用指南.md), which covers custom-model integration, `cordis.yml` composition, common errors, and verified run records.
+Before using the SDK, read the [DeepSeek Harness complete guide (Java edition)](deepseek-harness4j-user-guide.en.md), which covers custom-model integration, `cordis.yml` composition, common errors, and verified run records.
 
 ---
 
@@ -592,7 +592,7 @@ The full line-by-line migration notes (Python->Java syntax differences, JDK vers
 ```ini
 deepseek-harness4j/
 ├── README.md                 # this file (English); README.zh.md (Chinese) - mutually linked
-├── deepseek-harness4j-使用指南.md  # Java edition of the upstream deepseek-harness-使用指南.md
+├── deepseek-harness4j-使用指南.md  # complete guide, Chinese (Java edition) — see deepseek-harness4j-user-guide.en.md for English
 ├── docs/
 │   ├── port-coverage.md(.en.md)        # [checklist] every .py/.md -> Java counterpart, zero omissions
 │   ├── repo-inventory.md(.en.md)       # [repo-wide index] ownership/status of every upstream area
@@ -640,7 +640,8 @@ deepseek-harness4j/
 
 | Document | Description |
 |---|---|
-| [deepseek-harness4j-使用指南.md](deepseek-harness4j-使用指南.md) | Complete usage guide (background/install/custom models/composition/Demo/verification/architecture; Java edition) |
+| [deepseek-harness4j-使用指南.md](deepseek-harness4j-使用指南.md) | Complete usage guide, Chinese (background/install/custom models/composition/Demo/verification/architecture; Java edition) |
+| [deepseek-harness4j-user-guide.en.md](deepseek-harness4j-user-guide.en.md) | Complete usage guide, English (bilingual counterpart, mutually linked) |
 | [docs/port-coverage.en.md](docs/port-coverage.en.md) | **Port coverage checklist**: every upstream .py/.md vs its Java counterpart, zero-omission proof |
 | [docs/java-migration-notes.en.md](docs/java-migration-notes.en.md) | Line-by-line migration notes (syntax/JDK/Spring) |
 | [docs/python-sdk-api-reference.en.md](docs/python-sdk-api-reference.en.md) | **Public spec**: the API and JSON-RPC wire protocol of 100% of the Python SDK, so other projects (any language) can build an equivalent client |

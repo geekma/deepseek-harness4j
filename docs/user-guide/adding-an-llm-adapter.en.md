@@ -2,7 +2,7 @@
 
 [中文](adding-an-llm-adapter.md) | English
 
-> This file is the port of the upstream `docs/cookbook/adding-an-llm-adapter.md` (+ `.zh.md`). An LLM adapter is a **runtime-side TypeScript plugin**, client-language independent — Java/Python SDK callers do not change any code, only mount it in `cordis.yml` and select the provider/model (see `deepseek-harness4j-使用指南.md` §12).
+> This file is the port of the upstream `docs/cookbook/adding-an-llm-adapter.md` (+ `.zh.md`). An LLM adapter is a **runtime-side TypeScript plugin**, client-language independent — Java/Python SDK callers do not change any code, only mount it in `cordis.yml` and select the provider/model (see `deepseek-harness4j-user-guide.en.md` §12).
 
 How to connect a new model provider. Reference implementations: `packages/llm/llm-deepseek` (direct HTTP, SSE framed by `eventsource-parser`) and `packages/llm/llm-pi-ai` (wrapping an LLM library). Read the `StreamChunk` doc in `packages/llm/llm/src/types.ts` first — it records the protocol conventions both adapters were verified against.
 

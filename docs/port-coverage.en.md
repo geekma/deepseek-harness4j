@@ -70,7 +70,7 @@ examples/jsonrpc-agent/minimal.py
 | 2 | `python/development.md` / `development.zh.md` | `development.md` (Chinese) / `development.en.md` (English) | ✅ complete |
 | 3 | `python/sdk/README.md` / `README.zh.md` | `sdk/README.md` / `sdk/README.en.md` | ✅ complete |
 | 4 | `python/sdk-runtime/README.md` / `README.zh.md` | `sdk-runtime/README.md` / `sdk-runtime/README.en.md` | ✅ complete |
-| 5 | root `deepseek-harness-使用指南.md` | `deepseek-harness4j-使用指南.md` (Java edition) | ✅ complete (sections 一–十七 all preserved) |
+| 5 | root `deepseek-harness-使用指南.md` | `deepseek-harness4j-使用指南.md` / `deepseek-harness4j-user-guide.en.md` (bilingual) | ✅ complete (sections 一–十七 all preserved) |
 | 6 | `examples/jsonrpc-agent/README.md` / `README.zh.md` | `examples/jsonrpc-agent/README.md` / `README.en.md` | ✅ complete |
 | 7 | `docs/user/guide/python-sdk.md` (official SDK tutorial) | §4 API reference here + `sdk/README.md` (tutorial content folded in) | ✅ complete (key points folded in) |
 | 8 | migration/audit additions | `docs/java-migration-notes.md` / `.en.md`, `docs/port-coverage.md` / `.en.md`, `docs/python-sdk-api-reference.md` / `.en.md` | ✅ added |

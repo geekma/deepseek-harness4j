@@ -62,7 +62,7 @@ examples/jsonrpc-agent/minimal.py
 | 2 | `python/development.md` / `development.zh.md` | `development.md`（中文）/ `development.en.md`（英文） | ✅ 完整 |
 | 3 | `python/sdk/README.md` / `README.zh.md` | `sdk/README.md` / `sdk/README.en.md` | ✅ 完整 |
 | 4 | `python/sdk-runtime/README.md` / `README.zh.md` | `sdk-runtime/README.md` / `sdk-runtime/README.en.md` | ✅ 完整 |
-| 5 | 根 `deepseek-harness-使用指南.md` | `deepseek-harness4j-使用指南.md`（Java 版） | ✅ 完整（一~十七节全部保留） |
+| 5 | 根 `deepseek-harness-使用指南.md` | `deepseek-harness4j-使用指南.md` / `deepseek-harness4j-user-guide.en.md`（中英双语） | ✅ 完整（一~十七节全部保留） |
 | 6 | `examples/jsonrpc-agent/README.md` / `README.zh.md` | `examples/jsonrpc-agent/README.md` / `README.en.md` | ✅ 完整 |
 | 7 | `docs/user/guide/python-sdk.md` / `python-sdk.zh.md` | `docs/user-guide/python-sdk.md` / `.en.md`（Java 教程） | ✅ 完整 |
 | 8 | `docs/user/guide/index.md` / `index.zh.md` | `docs/user-guide/web-ui.md` / `.en.md` | ✅ 完整 |
