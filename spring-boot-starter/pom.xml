@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  deepseek-harness4j-spring-boot-starter: Spring Boot auto-configuration around the SDK.
+
+  The Python SDK has no framework integration; the Java port adds a thin Spring Boot
+  starter so applications can inject a configured DeepSeekHarness bean from application.yml
+  (Spring Cloud Config can supply the properties; a Spring MVC controller can call it).
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.deepseek-ai</groupId>
+    <artifactId>deepseek-harness4j</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>deepseek-harness4j-spring-boot-starter</artifactId>
+  <name>deepseek-harness4j-spring-boot-starter</name>
+  <description>Spring Boot auto-configuration exposing the DeepSeek Harness Java SDK as a bean</description>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring.boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.deepseek-ai</groupId>
+      <artifactId>deepseek-harness4j-sdk</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-autoconfigure</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot</artifactId>
+    </dependency>
+  </dependencies>
+</project>

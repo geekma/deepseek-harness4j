@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  deepseek-harness4j-sdk: Java port of the Python deepseek_harness SDK package.
+
+  Port mapping:
+    pyproject.toml (python/sdk)      -> this pom
+    src/deepseek_harness/__init__.py -> com.deepseek.harness4j (package-info + facade)
+    src/deepseek_harness/api.py      -> DeepSeekHarness / DeepSeekHarnessConfig / Session / RunResult
+    src/deepseek_harness/client.py   -> client/HarnessClient / HarnessConfig / NotificationSubscription
+    src/deepseek_harness/models.py   -> model/*
+    src/deepseek_harness/errors.py   -> error/*
+    src/deepseek_harness_runtime/__init__.py -> runtime/RuntimeResolver
+    tests/*                          -> src/test/java (JUnit 5)
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.deepseek-ai</groupId>
+    <artifactId>deepseek-harness4j</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>deepseek-harness4j-sdk</artifactId>
+  <name>deepseek-harness4j-sdk</name>
+  <description>Core JSON-RPC stdio client and high-level turns API for DeepSeek Harness</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <release>${maven.compiler.release}</release>
+          <parameters>true</parameters>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.2.5</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-report-plugin</artifactId>
+        <version>3.2.5</version>
+        <configuration>
+          <showSuccess>true</showSuccess>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.2.0</version>
+        <configuration>
+          <mainClass>com.deepseek.harness4j.examples.MinimalAgent</mainClass>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

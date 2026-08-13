@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Root Maven project for DeepSeek Harness Java SDK (deepseek-harness4j).
+
+  This project is a line-by-line Java port of the DeepSeek Harness Python SDK
+  (python/sdk + python/sdk-runtime in the upstream deepseek-harness repository).
+  Modules:
+    - deepseek-harness4j-sdk               core client + high-level turns API + runtime resolution
+    - deepseek-harness4j-spring-boot-starter  Spring Boot auto-configuration around the SDK
+    - deepseek-harness4j-spring-boot-example  runnable Spring Boot MVC example
+
+  JDK: targets Java 17 LTS via the Maven release flag. Java 17 is the baseline for
+  Spring Boot 3.x and matches the LTS release used by most Spring deployments;
+  the code also builds and runs on Java 21 / 25.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.deepseek-ai</groupId>
+  <artifactId>deepseek-harness4j</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>deepseek-harness4j</name>
+  <description>Java SDK for DeepSeek Harness: a line-by-line port of the Python SDK over JSON-RPC stdio</description>
+  <url>https://github.com/deepseek-ai/deepseek-harness</url>
+  <licenses>
+    <license>
+      <name>MIT</name>
+      <url>https://opensource.org/licenses/MIT</url>
+    </license>
+  </licenses>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>17</maven.compiler.release>
+    <jackson.version>2.17.2</jackson.version>
+    <junit.version>5.10.2</junit.version>
+    <spring.boot.version>3.3.5</spring.boot.version>
+    <slf4j.version>2.0.16</slf4j.version>
+  </properties>
+
+  <modules>
+    <module>sdk</module>
+    <module>spring-boot-starter</module>
+    <module>spring-boot-example</module>
+  </modules>
+</project>

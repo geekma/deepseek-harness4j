@@ -1,0 +1,20 @@
+# Maven build outputs
+target/
+*.class
+*.jar
+!**/src/**/*.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+
+# Local build / runtime artifacts (injected by the upstream build)
+runtime/exe/
+runtime/node/

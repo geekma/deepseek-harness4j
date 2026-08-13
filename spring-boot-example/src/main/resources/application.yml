@@ -1,0 +1,15 @@
+server:
+  port: 8080
+
+deepseek:
+  harness:
+    # provider: deepseek-official      # provider route registered by the Cordis composition
+    # model: deepseek-v4-flash         # model id resolved by the adapter
+    # maxTokens: 49152                 # optional per-request output-token cap
+    # cwd: /absolute/path/to/workspace # agent working directory
+    # sessionRoot: /absolute/path/to/sessions
+    # cordis: examples/jsonrpc-agent/minimal.cordis.yml
+    # baseUrl: https://your-gateway.example.com/v1   # OpenAI-compatible endpoint
+    # apiKey: ${DEEPSEEK_API_KEY}                     # or rely on the environment variable
+    requestTimeoutSeconds: 300
+    shutdownTimeoutSeconds: 2
