@@ -43,4 +43,64 @@ public record RunResult(
         Objects.requireNonNull(events, "events");
         Objects.requireNonNull(notifications, "notifications");
     }
+
+    /**
+     * The full CoT reasoning chain: every {@code reasoning-delta} text in this interval,
+     * concatenated in wire order. Empty string when the model produced no reasoning.
+     */
+    public String reasoningContent() {
+        return SessionSupport.extractReasoningContent(events);
+    }
+
+    /**
+     * Aggregated token accounting across every {@code assistant/message} that carried a
+     * {@code usage} object, summed over all turns in the interval.
+     */
+    public TokenUsage tokenUsage() {
+        return SessionSupport.extractTokenUsage(events);
+    }
+
+    /**
+     * Structured tool-call tree: each {@code tool/call} paired with its matching
+     * {@code tool/result} by {@code callId}, in wire order.
+     */
+    public List<ToolCallRecord> toolCalls() {
+        return SessionSupport.extractToolCalls(events);
+    }
+
+    /**
+     * Token accounting for one interval, mapping the upstream TokenUsage vocabulary
+     * (input/output/cacheRead/cacheWrite/reasoning) to the conventional prompt/completion
+     * split used by LLM SDKs.
+     */
+    public record TokenUsage(
+            int promptTokens,
+            int completionTokens,
+            int reasoningTokens,
+            int cacheReadTokens,
+            int cacheWriteTokens,
+            int totalTokens) {
+
+        public static final TokenUsage EMPTY = new TokenUsage(0, 0, 0, 0, 0, 0);
+    }
+
+    /**
+     * One paired tool invocation: the {@code tool/call} request and the {@code tool/result}
+     * outcome, matched by {@code callId}. Arguments are the raw JSON string exactly as the
+     * model produced it; {@code isError} is true when the result carried an {@code error}
+     * object.
+     */
+    public record ToolCallRecord(
+            String callId,
+            String toolName,
+            String argumentsJson,
+            Object result,
+            boolean isError,
+            long durationMs) {
+
+        /** Alias for argumentsJson. */
+        public String arguments() {
+            return argumentsJson;
+        }
+    }
 }

@@ -24,8 +24,8 @@
   <packaging>pom</packaging>
 
   <name>deepseek-harness4j</name>
-  <description>Java SDK for DeepSeek Harness: a line-by-line port of the Python SDK over JSON-RPC stdio</description>
-  <url>https://github.com/deepseek-ai/deepseek-harness</url>
+  <description>Enterprise Java SDK &amp; Agent Runtime Framework for DeepSeek Harness (DeepSeek-R1 / V3)</description>
+  <url>https://github.com/geekma/deepseek-harness4j</url>
   <licenses>
     <license>
       <name>MIT</name>

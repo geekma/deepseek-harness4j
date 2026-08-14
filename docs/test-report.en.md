@@ -2,8 +2,8 @@
 
 [中文](test-report.md) | English
 
-> Generated: 2026-08-13. Environment: JDK 25 (target release 17), Maven 3.9, macOS. Command: `mvn -pl sdk test`.
-> Summary: **60 test cases**, failures **0**, errors **0**, skipped **7** (the skips are the real-runtime-carrier boot tests, which skip independently when no carrier is installed, per Python semantics).
+> Generated: 2026-08-14. Environment: JDK 25 (target release 17), Maven 3.9, macOS. Command: `mvn test` (reactor, incl. starter module).
+> Summary (sdk module): **100 test cases**, failures **0**, errors **0**, skipped **7** (the skips are the real-runtime-carrier boot tests, which skip independently when no carrier is installed, per Python semantics).
 
 ## 1. Summary
 
@@ -18,7 +18,14 @@
 | ClientLevelTest | 15 | 0 | 0 | 0 | ✅ green |
 | SubscriptionRoutingTest | 3 | 0 | 0 | 0 | ✅ green |
 | RuntimeResolverTest | 5 | 0 | 0 | 0 | ✅ green |
-| **Total** | **60** | **0** | **0** | **7** | |
+| ReadmeExamplesTest | 13 | 0 | 0 | 0 | ✅ green |
+| RunResultExtractionTest | 9 | 0 | 0 | 0 | ✅ green |
+| SessionLogTest | 15 | 0 | 0 | 0 | ✅ green |
+| SessionResumeAsyncTest | 3 | 0 | 0 | 0 | ✅ green |
+| **Total (sdk)** | **100** | **0** | **0** | **7** | |
+| SpringStarterTest (starter module) | 5 | 0 | 0 | 0 | ✅ green |
+
+> The P0 enhancements (see `review-five-features.md`) add three test classes: `RunResultExtractionTest` (CoT/token/tool-call extraction), `SessionLogTest` (offline JSONL engine: plain/zstd, replay, search, fork, chunk expansion), and `SessionResumeAsyncTest` (resume alias + runAsync).
 
 ## 2. Case details
 
@@ -129,6 +136,66 @@
 | ✅ `test_unknown_env_mode_fails_loud` | PASS | 0.001 |
 | ✅ `test_default_config_is_shipped_with_the_package` | PASS | 0.001 |
 
+### ReadmeExamplesTest
+
+| Test method | Result | Time(s) |
+|---|---:|---:|
+| ✅ `test_zero_config_minimal_turn_runs` | PASS | 0.0 |
+| ✅ `test_config_builder_with_options_runs` | PASS | 0.0 |
+| ✅ `test_structured_results_runs` | PASS | 0.0 |
+| ✅ `test_forked_child_sessions_run` | PASS | 0.0 |
+| ✅ `test_custom_model_runs` | PASS | 0.0 |
+| ✅ `test_session_fork_and_result` | PASS | 0.0 |
+| ✅ `test_resume_a_session` | PASS | 0.0 |
+| ✅ `test_complete_workflow_example` | PASS | 0.0 |
+| ✅ `test_concurrent_sessions` | PASS | 0.0 |
+| ✅ `test_config_with_tight_timeouts` | PASS | 0.0 |
+| ✅ `test_error_handling` | PASS | 0.0 |
+| ✅ `test_building_harness_instances` | PASS | 0.0 |
+| ✅ `test_session_management` | PASS | 0.0 |
+
+### RunResultExtractionTest
+
+| Test method | Result | Time(s) |
+|---|---:|---:|
+| ✅ `test_reasoning_content_extracted_from_reasoning_delta_chunks` | PASS | 0.0 |
+| ✅ `test_reasoning_content_handles_packed_reasoning_chunks_row` | PASS | 0.0 |
+| ✅ `test_reasoning_content_empty_when_no_reasoning` | PASS | 0.0 |
+| ✅ `test_token_usage_aggregates_assistant_messages` | PASS | 0.0 |
+| ✅ `test_token_usage_empty_when_no_usage_reported` | PASS | 0.0 |
+| ✅ `test_tool_calls_pair_call_and_result_by_call_id` | PASS | 0.0 |
+| ✅ `test_tool_calls_flag_error_results_and_unmatched_calls` | PASS | 0.0 |
+| ✅ `test_tool_calls_empty_when_no_tool_events` | PASS | 0.0 |
+| ✅ `test_end_to_end_run_result_extractions_from_wire_stream` | PASS | 0.0 |
+
+### SessionLogTest
+
+| Test method | Result | Time(s) |
+|---|---:|---:|
+| ✅ `test_list_and_read_plain_jsonl` | PASS | 0.0 |
+| ✅ `test_read_unknown_session_returns_empty` | PASS | 0.0 |
+| ✅ `test_list_ignores_unrelated_files_and_project_grouping` | PASS | 0.0 |
+| ✅ `test_encode_segment_escapes_unsafe_ids` | PASS | 0.0 |
+| ✅ `test_read_zstd_log` | PASS | 0.0 |
+| ✅ `test_read_mixed_plain_and_zstd_sessions` | PASS | 0.0 |
+| ✅ `test_packed_chunk_rows_expand_to_assistant_chunk_events` | PASS | 0.0 |
+| ✅ `test_packed_tool_call_chunks_expand_with_id_and_name` | PASS | 0.0 |
+| ✅ `test_replay_filters_metadata_and_keeps_interaction_events` | PASS | 0.0 |
+| ✅ `test_search_filters_by_event_type_and_text_and_time` | PASS | 0.0 |
+| ✅ `test_search_requires_at_least_one_filter` | PASS | 0.0 |
+| ✅ `test_search_all_crosses_sessions` | PASS | 0.0 |
+| ✅ `test_fork_plain_creates_child_with_parent_lineage_and_seed_length` | PASS | 0.0 |
+| ✅ `test_fork_zstd_preserves_encoding` | PASS | 0.0 |
+| ✅ `test_fork_missing_source_throws` | PASS | 0.0 |
+
+### SessionResumeAsyncTest
+
+| Test method | Result | Time(s) |
+|---|---:|---:|
+| ✅ `test_resume_is_an_explicit_alias_for_run_on_the_same_session` | PASS | 0.0 |
+| ✅ `test_run_async_resolves_the_same_result_as_run` | PASS | 0.0 |
+| ✅ `test_run_async_with_notification_callback` | PASS | 0.0 |
+
 
 
 ## 3. Python test → Java test one-to-one mapping (test-case index)
@@ -234,5 +301,5 @@ mvn -pl sdk surefire-report:report        # generate the HTML report (sdk/target
 
 ## 5. Failure handling
 
-- All 60 cases are currently ✅ (0 failures / 0 errors); the 7 `⏭️` are semantic skips without a real carrier.
+- All 100 cases are currently ✅ (0 failures / 0 errors); the 7 `⏭️` are semantic skips without a real carrier.
 - After installing a runtime carrier, `BundledRuntimeBootTest` executes for real (see `development.en.md`).

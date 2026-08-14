@@ -18,3 +18,6 @@ target/
 # Local build / runtime artifacts (injected by the upstream build)
 runtime/exe/
 runtime/node/
+AGENTS.md
+.agents/rules/caveman.md
+GEMINI.md

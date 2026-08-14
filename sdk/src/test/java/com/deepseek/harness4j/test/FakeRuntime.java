@@ -201,6 +201,27 @@ public final class FakeRuntime {
                                 List.of(Map.of("type", "text", "text", "ok")))));
                         emit(status(params, "idle"));
                     }
+                    case "streaming-turn" -> {
+                        emit(inbox(params));
+                        emit(status(params, "running"));
+                        respond(id, Map.of("messageId", "message-1"));
+                        emit(sessionEvent(String.valueOf(params.get("sessionId")), Map.of(
+                                "type", "assistant/chunk",
+                                "data", Map.of("chunk", Map.of("type", "reasoning-delta", "text", "thinking...")))));
+                        emit(sessionEvent(String.valueOf(params.get("sessionId")), Map.of(
+                                "type", "assistant/chunk",
+                                "data", Map.of("chunk", Map.of("type", "text-delta", "text", "streaming hello")))));
+                        emit(sessionEvent(String.valueOf(params.get("sessionId")), Map.of(
+                                "type", "tool/call",
+                                "data", Map.of("callId", "call-1", "name", "bash", "arguments", "echo hi"))));
+                        emit(sessionEvent(String.valueOf(params.get("sessionId")), Map.of(
+                                "type", "tool/result",
+                                "data", Map.of("callId", "call-1", "message", "hi\n"))));
+                        emit(assistantMessage(params, Map.of("content",
+                                List.of(Map.of("type", "text", "text", "streaming hello")))));
+                        emit(turnEnd(params, 1, "completed"));
+                        emit(status(params, "idle"));
+                    }
                     case "late-idle" -> {
                         int turn = nextTurn();
                         String messageId = "message-" + turn;

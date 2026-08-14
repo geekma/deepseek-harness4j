@@ -2,8 +2,8 @@
 
 [English](test-report.en.md) | 中文
 
-> 生成时间：2026-08-13。环境：JDK 25（目标 release 17）、Maven 3.9、macOS。运行命令：`mvn -pl sdk test`。
-> 汇总：**60 个测试用例**，失败 **0**，错误 **0**，跳过 **7**（跳过为真实运行时载体 boot 测试，无载体时按 Python 语义独立跳过）。
+> 生成时间：2026-08-14。环境：JDK 25（目标 release 17）、Maven 3.9、macOS。运行命令：`mvn test`（reactor，含 starter 模块）。
+> 汇总（sdk 模块）：**100 个测试用例**，失败 **0**，错误 **0**，跳过 **7**（跳过为真实运行时载体 boot 测试，无载体时按 Python 语义独立跳过）。
 
 ## 1. 汇总
 
@@ -18,7 +18,14 @@
 | ClientLevelTest | 15 | 0 | 0 | 0 | ✅ 全绿 |
 | SubscriptionRoutingTest | 3 | 0 | 0 | 0 | ✅ 全绿 |
 | RuntimeResolverTest | 5 | 0 | 0 | 0 | ✅ 全绿 |
-| **合计** | **60** | **0** | **0** | **7** | |
+| ReadmeExamplesTest | 13 | 0 | 0 | 0 | ✅ 全绿 |
+| RunResultExtractionTest | 9 | 0 | 0 | 0 | ✅ 全绿 |
+| SessionLogTest | 15 | 0 | 0 | 0 | ✅ 全绿 |
+| SessionResumeAsyncTest | 3 | 0 | 0 | 0 | ✅ 全绿 |
+| **合计（sdk）** | **100** | **0** | **0** | **7** | |
+| SpringStarterTest（starter 模块） | 5 | 0 | 0 | 0 | ✅ 全绿 |
+
+> P0 增强（见 `review-five-features.md`）新增三类测试：`RunResultExtractionTest`（CoT/token/工具调用提取）、`SessionLogTest`（离线 JSONL 引擎：plain/zstd、回放、搜索、fork、chunk 展开）、`SessionResumeAsyncTest`（resume 别名 + runAsync）。
 
 ## 2. 用例明细
 
@@ -129,6 +136,66 @@
 | ✅ `test_unknown_env_mode_fails_loud` | PASS | 0.001 |
 | ✅ `test_default_config_is_shipped_with_the_package` | PASS | 0.001 |
 
+### ReadmeExamplesTest
+
+| 测试方法 | 结果 | 耗时(s) |
+|---|---:|---:|
+| ✅ `test_zero_config_minimal_turn_runs` | PASS | 0.0 |
+| ✅ `test_config_builder_with_options_runs` | PASS | 0.0 |
+| ✅ `test_structured_results_runs` | PASS | 0.0 |
+| ✅ `test_forked_child_sessions_run` | PASS | 0.0 |
+| ✅ `test_custom_model_runs` | PASS | 0.0 |
+| ✅ `test_session_fork_and_result` | PASS | 0.0 |
+| ✅ `test_resume_a_session` | PASS | 0.0 |
+| ✅ `test_complete_workflow_example` | PASS | 0.0 |
+| ✅ `test_concurrent_sessions` | PASS | 0.0 |
+| ✅ `test_config_with_tight_timeouts` | PASS | 0.0 |
+| ✅ `test_error_handling` | PASS | 0.0 |
+| ✅ `test_building_harness_instances` | PASS | 0.0 |
+| ✅ `test_session_management` | PASS | 0.0 |
+
+### RunResultExtractionTest
+
+| 测试方法 | 结果 | 耗时(s) |
+|---|---:|---:|
+| ✅ `test_reasoning_content_extracted_from_reasoning_delta_chunks` | PASS | 0.0 |
+| ✅ `test_reasoning_content_handles_packed_reasoning_chunks_row` | PASS | 0.0 |
+| ✅ `test_reasoning_content_empty_when_no_reasoning` | PASS | 0.0 |
+| ✅ `test_token_usage_aggregates_assistant_messages` | PASS | 0.0 |
+| ✅ `test_token_usage_empty_when_no_usage_reported` | PASS | 0.0 |
+| ✅ `test_tool_calls_pair_call_and_result_by_call_id` | PASS | 0.0 |
+| ✅ `test_tool_calls_flag_error_results_and_unmatched_calls` | PASS | 0.0 |
+| ✅ `test_tool_calls_empty_when_no_tool_events` | PASS | 0.0 |
+| ✅ `test_end_to_end_run_result_extractions_from_wire_stream` | PASS | 0.0 |
+
+### SessionLogTest
+
+| 测试方法 | 结果 | 耗时(s) |
+|---|---:|---:|
+| ✅ `test_list_and_read_plain_jsonl` | PASS | 0.0 |
+| ✅ `test_read_unknown_session_returns_empty` | PASS | 0.0 |
+| ✅ `test_list_ignores_unrelated_files_and_project_grouping` | PASS | 0.0 |
+| ✅ `test_encode_segment_escapes_unsafe_ids` | PASS | 0.0 |
+| ✅ `test_read_zstd_log` | PASS | 0.0 |
+| ✅ `test_read_mixed_plain_and_zstd_sessions` | PASS | 0.0 |
+| ✅ `test_packed_chunk_rows_expand_to_assistant_chunk_events` | PASS | 0.0 |
+| ✅ `test_packed_tool_call_chunks_expand_with_id_and_name` | PASS | 0.0 |
+| ✅ `test_replay_filters_metadata_and_keeps_interaction_events` | PASS | 0.0 |
+| ✅ `test_search_filters_by_event_type_and_text_and_time` | PASS | 0.0 |
+| ✅ `test_search_requires_at_least_one_filter` | PASS | 0.0 |
+| ✅ `test_search_all_crosses_sessions` | PASS | 0.0 |
+| ✅ `test_fork_plain_creates_child_with_parent_lineage_and_seed_length` | PASS | 0.0 |
+| ✅ `test_fork_zstd_preserves_encoding` | PASS | 0.0 |
+| ✅ `test_fork_missing_source_throws` | PASS | 0.0 |
+
+### SessionResumeAsyncTest
+
+| 测试方法 | 结果 | 耗时(s) |
+|---|---:|---:|
+| ✅ `test_resume_is_an_explicit_alias_for_run_on_the_same_session` | PASS | 0.0 |
+| ✅ `test_run_async_resolves_the_same_result_as_run` | PASS | 0.0 |
+| ✅ `test_run_async_with_notification_callback` | PASS | 0.0 |
+
 
 
 ## 3. Python 测试 → Java 测试 一一映射（测试用例清单）
@@ -234,5 +301,5 @@ mvn -pl sdk surefire-report:report        # 生成 HTML 报告（sdk/target/site
 
 ## 5. 失败处理
 
-- 全部 60 个用例当前为 ✅（0 失败/0 错误）；7 个 `⏭️` 为无真实载体时的语义跳过。
+- 全部 100 个用例当前为 ✅（0 失败/0 错误）；7 个 `⏭️` 为无真实载体时的语义跳过。
 - 安装运行时载体后运行 `BundledRuntimeBootTest` 会转为真实执行（见 `development.md`）。

@@ -83,7 +83,7 @@
 git clone https://github.com/geekma/deepseek-harness4j.git
 cd deepseek-harness4j
 mvn install            # 构建全部模块（sdk / spring-boot-starter / spring-boot-example）
-mvn test               # 运行测试（sdk 模块，60 个用例）
+mvn test               # 运行测试（全 reactor 116 个用例）
 ```
 
 #### 2.1.3 作为 Maven 依赖引入
@@ -138,6 +138,22 @@ try (DeepSeekHarness harness = new DeepSeekHarness(DeepSeekHarnessConfig.builder
     RunResult result = harness.run("Inspect the repo and fix the failing tests.", "example-001", null);
     System.out.println(result.finalResponse());
 }
+```
+
+#### 2.1.6 Java 侧已落地的增强能力
+
+> 2026-08-14 已实现（完整状态矩阵见 `review-five-features.md` §0.1；均有测试覆盖，`mvn test` 全绿）。
+
+- **增强型 `RunResult`** —— `reasoningContent()`（CoT 思维链）、`tokenUsage()`（`TokenUsage`：prompt / completion / reasoning / cacheRead / cacheWrite / total）、`toolCalls()`（`List<ToolCallRecord>`：callId / toolName / argumentsJson / result / isError / durationMs）。由 `SessionSupport` 提取器支撑。
+- **`Session.resume()`** —— 同一持久会话上 `run()` 的显式别名；**`Session.runAsync()`** —— 返回 `CompletableFuture<RunResult>`，工作线程执行。
+- **`SessionLog`**（`com.deepseek.harness4j.log`）—— 纯 Java 离线引擎，直接读运行时 append-only 会话日志：`list` / `read` / `stream` / `replay` / `search` / `searchAll` / `fork`，自动识别 `session.jsonl`（明文）与 `session.jsonl.zstd`（Zstandard 帧），并把 packed chunk 行展开回 `assistant/chunk` 事件。
+
+```java
+import com.deepseek.harness4j.log.SessionLog;
+
+List<SessionLog.Header> headers = SessionLog.list(Path.of("/abs/path/to/sessions"));
+List<Map<String, Object>> replay = SessionLog.replay(root, "example-001");
+SessionLog.fork(root, "example-001", "example-001-fork");   // 新分支，可直接 resume
 ```
 
 ### 2.2 上游配套客户端（交叉参考，非 Java SDK 路径）
@@ -1371,3 +1387,99 @@ scripts/     仓库门禁与生成器
 ### 17.10 一句话定位
 
 > **dsh 是一个"一切皆插件、模型无关、可自托管、多端驱动、带强审计纪律与沙箱"的通用 Agent harness——DeepSeek 版的可组合 Claude Code,适合想自己掌控 agent 运行时、接私有/自建模型、并希望行为可复现可审计的团队。deepseek-harness4j 把其中的 Python SDK 客户端逐行移植为 Java,让 Java/Spring 技术栈也能直接嵌入这套运行时。**
+
+---
+
+## 十八、Java 4j 专属企业级增强特性（超越 Python SDK 维度）
+
+`deepseek-harness4j` 不仅完整移植了上游 Python SDK 的所有核心协议与模型交互，更针对 Java 企业级生态实现了六大原生增强特性：
+
+### 18.1 纯 Java 离线 SessionLog 引擎（Zstd 流式解析）
+
+无需拉起任何 Node.js / Python 运行时子进程，纯 Java 即可直接操作落盘的 `.jsonl` 或 `.jsonl.zstd` 会话轨迹：
+
+```java
+import com.deepseek.harness4j.log.SessionLog;
+import java.nio.file.Path;
+import java.util.List;
+
+Path sessionRoot = Path.of("/path/to/.sessions");
+
+// 1. 扫描会话列表（仅读首帧 Header，O(1) 内存）
+List<SessionLog.Header> headers = SessionLog.list(sessionRoot);
+
+// 2. 跨会话全局全文搜索
+List<SessionLog.SearchHit> hits = SessionLog.searchAll(sessionRoot, "Exception");
+
+// 3. 离线会话分支派生（Fork）
+SessionLog.Header forked = SessionLog.fork(sessionRoot, "session-001", "session-001-fork");
+```
+
+### 18.2 响应式与非阻塞流式推流（Reactive Streaming & Async）
+
+原生返回 Java 9+ `Flow.Publisher<StreamChunk>`，无缝集成 Spring WebFlux `Flux.from(publisher)` 与 Server-Sent Events (SSE)：
+
+```java
+// 1. 回调式实时消费
+harness.stream("重构用户登录模块", chunk -> {
+    if ("reasoning".equals(chunk.type())) {
+        System.out.print("[思考] " + chunk.text());
+    } else if ("content".equals(chunk.type())) {
+        System.out.print(chunk.text());
+    }
+});
+
+// 2. 非阻塞异步执行 (CompletableFuture)
+CompletableFuture<RunResult> future = harness.runAsync("后台分析日志");
+```
+
+### 18.3 Java 本地 Tool 扩展注册中心（`@HarnessTool`）
+
+无需编写 TypeScript 插件，利用注解直接将 Java 方法与 Spring Bean 暴露为 LLM 工具：
+
+```java
+public class OrderTools {
+    @HarnessTool(name = "get_order", description = "根据订单 ID 获取订单详情")
+    public String getOrder(@Param(name = "orderId", description = "订单唯一标识") Long orderId) {
+        return orderService.getOrderDetailJson(orderId);
+    }
+}
+
+// 自动生成符合 LLM Tool 标准的 JSON Schema
+ToolRegistry registry = new ToolRegistry();
+registry.register(new OrderTools());
+```
+
+### 18.4 类型安全 Cordis DSL 与 Minimal 工厂
+
+通过 Java 强类型 Builder 组装 Cordis 配置，避免手写易出错的 YAML：
+
+```java
+// 1. 强类型 Cordis 构建器
+CordisConfig config = CordisConfig.builder()
+        .provider(LlmProvider.DEEPSEEK_OFFICIAL)
+        .model("deepseek-reasoner")
+        .sandboxPolicy(SandboxPolicy.builder()
+                .allowNetwork(false)
+                .readOnlyRoot(true)
+                .allowedCommands(List.of("git", "mvn", "pytest"))
+                .build())
+        .compression(CompressionMode.ZSTD)
+        .build();
+
+// 2. 一行代码创建 Minimal 基准评测 Harness
+DeepSeekHarness minimal = DeepSeekHarness.createMinimal("/workspace/swe-bench-task");
+```
+
+### 18.5 工业级可观测性链路导出（OpenTelemetry & Langfuse）
+
+```java
+RunResult result = harness.run("执行单元测试");
+
+// 导出为 OpenTelemetry GenAI Semantic Conventions 标准属性
+Map<String, Object> spanAttrs = OtelTraceExporter.exportGenAiSpan(result, "deepseek-reasoner");
+
+// 导出为 Langfuse 兼容 Trace 结构
+Map<String, Object> langfuseTrace = LangfuseExporter.exportTrace(result, "unit-test-trace");
+```
+

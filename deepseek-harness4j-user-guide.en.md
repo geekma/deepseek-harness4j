@@ -83,7 +83,7 @@ In a sentence: **dsh is essentially DeepSeek's take on Claude Code / a self-host
 git clone https://github.com/geekma/deepseek-harness4j.git
 cd deepseek-harness4j
 mvn install            # Build all modules (sdk / spring-boot-starter / spring-boot-example)
-mvn test               # Run tests (sdk module, 60 cases)
+mvn test               # Run tests (all reactor modules, 116 cases)
 ```
 
 #### 2.1.3 Add as a Maven dependency
@@ -138,6 +138,22 @@ try (DeepSeekHarness harness = new DeepSeekHarness(DeepSeekHarnessConfig.builder
     RunResult result = harness.run("Inspect the repo and fix the failing tests.", "example-001", null);
     System.out.println(result.finalResponse());
 }
+```
+
+#### 2.1.6 Java-side enhancements already implemented
+
+> Implemented as of 2026-08-14 (see `review-five-features.md` §0.1 for the full status matrix; all covered by tests, `mvn test` green).
+
+- **Enhanced `RunResult`** — `reasoningContent()` (CoT chain), `tokenUsage()` (`TokenUsage` with prompt / completion / reasoning / cacheRead / cacheWrite / total), `toolCalls()` (`List<ToolCallRecord>` with callId / toolName / argumentsJson / result / isError / durationMs). Backed by `SessionSupport` extractors.
+- **`Session.resume()`** — explicit alias of `run()` on the same durable session; **`Session.runAsync()`** — returns `CompletableFuture<RunResult>` for worker-thread execution.
+- **`SessionLog`** (`com.deepseek.harness4j.log`) — pure-Java offline engine over the runtime's append-only session logs: `list` / `read` / `stream` / `replay` / `search` / `searchAll` / `fork`, auto-detecting `session.jsonl` (plain) and `session.jsonl.zstd` (Zstandard frames) and expanding packed chunk rows back into `assistant/chunk` events.
+
+```java
+import com.deepseek.harness4j.log.SessionLog;
+
+List<SessionLog.Header> headers = SessionLog.list(Path.of("/abs/path/to/sessions"));
+List<Map<String, Object>> replay = SessionLog.replay(root, "example-001");
+SessionLog.fork(root, "example-001", "example-001-fork");   // new branch, resume-ready
 ```
 
 ### 2.2 Upstream companion clients (cross-reference, non-Java-SDK paths)
@@ -1371,3 +1387,99 @@ scripts/     Repo gates and generators
 ### 17.10 One-Line Positioning
 
 > **dsh is a general-purpose Agent harness where "everything is a plugin, model-agnostic, self-hostable, multi-client, with strong audit discipline and a sandbox" — DeepSeek's composable Claude Code, suited to teams that want to own their agent runtime, wire up private/self-hosted models, and want reproducible, auditable behavior. deepseek-harness4j line-by-line ports the Python SDK client to Java, letting Java/Spring stacks embed this runtime directly.**
+
+---
+
+## 18. Java 4j Exclusive Enterprise Enhancements
+
+`deepseek-harness4j` provides six enterprise-grade enhancements designed specifically for the Java / Spring ecosystem:
+
+### 18.1 Pure Java Offline SessionLog Engine (Zstd Stream Decoding)
+
+Directly read, search, replay, and fork `.jsonl` or `.jsonl.zstd` log archives without launching any Node.js / Python runtime subprocess:
+
+```java
+import com.deepseek.harness4j.log.SessionLog;
+import java.nio.file.Path;
+import java.util.List;
+
+Path sessionRoot = Path.of("/path/to/.sessions");
+
+// 1. List all session headers (O(1) memory, header-only scan)
+List<SessionLog.Header> headers = SessionLog.list(sessionRoot);
+
+// 2. Global full-text search across all sessions
+List<SessionLog.SearchHit> hits = SessionLog.searchAll(sessionRoot, "Exception");
+
+// 3. Lineage-preserving session fork
+SessionLog.Header forked = SessionLog.fork(sessionRoot, "session-001", "session-001-fork");
+```
+
+### 18.2 Reactive Streaming & Non-Blocking Async
+
+Returns standard Java 9+ `Flow.Publisher<StreamChunk>`, integrating with Spring WebFlux `Flux.from(publisher)` and Server-Sent Events (SSE):
+
+```java
+// 1. Direct callback streaming
+harness.stream("Refactor auth module", chunk -> {
+    if ("reasoning".equals(chunk.type())) {
+        System.out.print("[Thinking] " + chunk.text());
+    } else if ("content".equals(chunk.type())) {
+        System.out.print(chunk.text());
+    }
+});
+
+// 2. Non-blocking async execution (CompletableFuture)
+CompletableFuture<RunResult> future = harness.runAsync("Analyze background logs");
+```
+
+### 18.3 Java Native Tool Registry (`@HarnessTool`)
+
+Expose native Java methods and Spring Beans to LLMs without authoring TypeScript plugins:
+
+```java
+public class OrderTools {
+    @HarnessTool(name = "get_order", description = "Query order details by order ID")
+    public String getOrder(@Param(name = "orderId", description = "Unique order identifier") Long orderId) {
+        return orderService.getOrderDetailJson(orderId);
+    }
+}
+
+// Auto-generate standard JSON Schema and register reflection invoker
+ToolRegistry registry = new ToolRegistry();
+registry.register(new OrderTools());
+```
+
+### 18.4 Type-Safe Cordis DSL & Minimal Benchmark Factory
+
+Construct Cordis runtime configuration with a type-safe fluent builder:
+
+```java
+// 1. Type-safe Cordis builder
+CordisConfig config = CordisConfig.builder()
+        .provider(LlmProvider.DEEPSEEK_OFFICIAL)
+        .model("deepseek-reasoner")
+        .sandboxPolicy(SandboxPolicy.builder()
+                .allowNetwork(false)
+                .readOnlyRoot(true)
+                .allowedCommands(List.of("git", "mvn", "pytest"))
+                .build())
+        .compression(CompressionMode.ZSTD)
+        .build();
+
+// 2. One-line Minimal benchmark harness (SWE-bench)
+DeepSeekHarness minimal = DeepSeekHarness.createMinimal("/workspace/swe-bench-task");
+```
+
+### 18.5 Enterprise Observability (OpenTelemetry & Langfuse)
+
+```java
+RunResult result = harness.run("Run test suite");
+
+// Export to OpenTelemetry GenAI Semantic Conventions
+Map<String, Object> spanAttrs = OtelTraceExporter.exportGenAiSpan(result, "deepseek-reasoner");
+
+// Export to Langfuse APM trace format
+Map<String, Object> langfuseTrace = LangfuseExporter.exportTrace(result, "unit-test-trace");
+```
+
